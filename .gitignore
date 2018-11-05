@@ -1,0 +1,12 @@
+# ignore eclipse project files
+.cproject
+.project
+.settings/
+
+# ignore compiled files
+*.o
+*.elf
+*.hex
+*.d
+*.map
+
