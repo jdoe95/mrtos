@@ -394,13 +394,6 @@ void sch_unload_current_req( sch_cblk_t *p_sch )
 
 	/*
 	 * If failed:
-	 * Current thread being scheduled again after unloading it
-	 * Make sure to remove it from the scheduler first
-	 */
-	UTIL_ASSERT( p_sch->p_next != p_sch->p_current );
-
-	/*
-	 * If failed:
 	 * Broken link
 	 */
 	UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_next != NULL);
@@ -408,7 +401,8 @@ void sch_unload_current_req( sch_cblk_t *p_sch )
 	p_sch->q_ready[counter].p_head =
 			p_sch->q_ready[counter].p_head->p_next;
 
-	OSPORT_CONTEXTSW_REQ();
+	if( p_sch->p_current != p_sch->p_next )
+		OSPORT_CONTEXTSW_REQ();
 }
 
 /*
@@ -1102,7 +1096,7 @@ UTIL_SAFE
 void os_thread_yield( void )
 {
 	UTIL_LOCK_EVERYTHING();
-	sch_reschedule_req(&g_sch);
+	sch_unload_current_req(&g_sch);
 	UTIL_UNLOCK_EVERYTHING();
 }
 
