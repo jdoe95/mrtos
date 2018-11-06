@@ -934,9 +934,14 @@ os_handle_t os_thread_create( os_uint_t prio, os_uint_t stack_size, void (*p_job
 	 * If failed:
 	 * Invalid parameters
 	 */
-	UTIL_ASSERT( prio < OSPORT_NUM_PRIOS );
 	UTIL_ASSERT( stack_size > 0);
 	UTIL_ASSERT( p_job != NULL );
+
+	/*
+	 * If failed:
+	 * Trying to create using idle thread priority
+	 */
+	UTIL_ASSERT( prio < OSPORT_NUM_PRIOS - 1 );
 
 	/* allocate memory */
 	UTIL_LOCK_EVERYTHING();
