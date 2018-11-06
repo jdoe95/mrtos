@@ -321,8 +321,26 @@ void sch_reschedule_req( sch_cblk_t *p_sch )
 	 */
 	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
 
+	/*
+	 * If failed:
+	 * Invalid current thread
+	 */
+	UTIL_ASSERT( p_sch->p_current != NULL );
+
+	/*
+	 * If failed:
+	 * Invalid current thread priority
+	 */
+	UTIL_ASSERT( p_sch->p_current->item_sch.tag < OSPORT_NUM_PRIOS );
+
 	if( counter < p_sch->p_current->item_sch.tag )
 	{
+		/*
+		 * If failed:
+		 * Cannot obtain thread from item
+		 */
+		UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_thd != NULL );
+
 		p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
 
 		/*
@@ -364,6 +382,12 @@ void sch_unload_current_req( sch_cblk_t *p_sch )
 	 * Idle thread missing
 	 */
 	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
+
+	/*
+	 * If failed:
+	 * Cannot obtain thread from item
+	 */
+	UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_thd != NULL );
 
 	p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
 
@@ -408,6 +432,13 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 	timestamp = p_sch->timestamp + 1;
 	p_sch->timestamp = timestamp;
 
+	/*
+	 * If failed:
+	 * Invalid delay queue pointers
+	 */
+	UTIL_ASSERT( p_sch->p_delayq_normal != NULL );
+	UTIL_ASSERT( p_sch->p_delayq_overflow != NULL );
+
 	/* time stamp overflowed */
 	if( timestamp == 0 )
 	{
@@ -423,13 +454,6 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 		p_sch->p_delayq_overflow = p_q_temp;
 	}
 
-	/*
-	 * If failed:
-	 * Invalid delay queue pointers
-	 */
-	UTIL_ASSERT( p_sch->p_delayq_normal != NULL );
-	UTIL_ASSERT( p_sch->p_delayq_overflow != NULL );
-
 	/* evict normal queue */
 	while( p_sch->p_delayq_normal->p_head != NULL )
 	{
@@ -437,11 +461,16 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 
 		if( p_item->tag >= timestamp )
 		{
+			/*
+			 * If failed:
+			 * Cannot obtain thread from item
+			 */
+			UTIL_ASSERT( p_item->p_thd != NULL );
+
 			/* obtain thread */
 			p_thd = p_item->p_thd;
 
-			/* TODO */
-			sch_ready( p_sch, p_thd);
+			thd_ready( p_thd, p_sch );
 		}
 		else
 			break;
@@ -460,8 +489,26 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 	 */
 	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
 
+	/*
+	 * If failed:
+	 * Invalid current thread
+	 */
+	UTIL_ASSERT( p_sch->p_current != NULL );
+
+	/*
+	 * If failed:
+	 * Invalid current thread priority
+	 */
+	UTIL_ASSERT( p_sch->p_current->item_sch.tag < OSPORT_NUM_PRIOS );
+
 	if( counter <= p_sch->p_current->item_sch.tag )
 	{
+		/*
+		 * If failed:
+		 * Cannot obtain thread from item
+		 */
+		UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_thd != NULL );
+
 		p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
 
 		/*
@@ -483,28 +530,90 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 UTIL_UNSAFE void sch_insert_ready( sch_cblk_t *p_sch, sch_qitem_t *p_item )
 {
 	/*
-	 *
+	 * If failed:
+	 * NULL pointer passed to p_sch or p_item
 	 */
+	UTIL_ASSERT( p_sch != NULL );
+	UTIL_ASSERT( p_item != NULL );
+
+	/*
+	 * If failed:
+	 * item not dequeued
+	 */
+	UTIL_ASSERT( p_item->p_q == NULL );
+
+	/*
+	 * If failed:
+	 * Invalid priority
+	 */
+	UTIL_ASSERT( p_item->tag < OSPORT_NUM_PRIOS );
+
+	/*
+	 * If failed:
+	 * Parent thread missing
+	 */
+	UTIL_ASSERT( p_item->p_thd != NULL );
+
+	sch_qitem_enq_fifo( p_item, &p_sch->q_ready[p_item->tag] );
 }
 
-UTIL_UNSAFE void sch_insert_delay( sch_cblk_t *p_sch, sch_qitem_t *p_item )
+/*
+ * Insert an item onto the delay queue
+ */
+UTIL_UNSAFE void sch_insert_delay( sch_cblk_t *p_sch, sch_qitem_t *p_item, uint_t timeout )
 {
+	uint_t wakeup, timestamp;
+
+	/*
+	 * If failed:
+	 * NULL pointer passed to p_sch or p_item
+	 */
+	UTIL_ASSERT( p_sch != NULL );
+	UTIL_ASSERT( p_item != NULL );
+
+	/*
+	 * If failed:
+	 * item not dequeued
+	 */
+	UTIL_ASSERT( p_item->p_q == NULL );
+
+	/*
+	 * If failed:
+	 * Parent thread missing
+	 */
+	UTIL_ASSERT( p_item->p_thd != NULL );
+
+	/*
+	 * If failed:
+	 * Invalid timeout
+	 */
+	UTIL_ASSERT( timeout != 0);
+
+	/* calculate wakeup */
+	timestamp = p_sch->timestamp;
+	wakeup = timestamp + timeout;
+
+	p_item->tag = wakeup;
+
+	/*
+	 * If failed:
+	 * Invalid delay queue pointers
+	 */
+	UTIL_ASSERT( p_sch->p_delayq_normal != NULL );
+	UTIL_ASSERT( p_sch->p_delayq_overflow != NULL );
+
+	/* wakeup timestamp overflowed */
+	if( wakeup < timestamp )
+	{
+		/* insert onto overflow queue */
+		sch_qitem_enq_prio( p_item, p_sch->p_delayq_overflow );
+	}
+	else
+	{
+		/* insert onto normal queue */
+		sch_qitem_enq_prio( p_item, p_sch->p_delayq_normal );
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /*
  * Initialize a thread control block (create a thread)
@@ -518,11 +627,11 @@ void thd_init( thd_cblk_t *p_thd, uint_t prio, void *p_stack, uint_t stack_size,
 	 * Invalid parameters
 	 */
 	UTIL_ASSERT(p_thd != NULL);
-	UTIL_ASSERT(p_stack != NULL );
-	UTIL_ASSERT( stack_size != 0);
-	UTIL_ASSERT( p_job != NULL );
-	UTIL_ASSERT( p_return != NULL );
-	UTIL_ASSERT( prio < OSPORT_NUM_PRIOS );
+	UTIL_ASSERT(p_stack != NULL);
+	UTIL_ASSERT(stack_size != 0);
+	UTIL_ASSERT(p_job != NULL);
+	UTIL_ASSERT(p_return != NULL);
+	UTIL_ASSERT(prio < OSPORT_NUM_PRIOS);
 
 	p_thd->p_stack = p_stack;
 	p_thd->p_sp = OSPORT_INIT_STACK(p_stack, stack_size, p_job, p_return );
@@ -534,14 +643,11 @@ void thd_init( thd_cblk_t *p_thd, uint_t prio, void *p_stack, uint_t stack_size,
 	mlst_init( &p_thd->mlst );
 }
 
-
-
-
 /*
  * Ready a thread
  */
 UTIL_UNSAFE
-void sch_ready( sch_cblk_t *p_sch, thd_cblk_t *p_thd )
+void thd_ready( thd_cblk_t *p_thd, sch_cblk_t *p_sch )
 {
 	/*
 	 * If failed:
@@ -561,25 +667,17 @@ void sch_ready( sch_cblk_t *p_sch, thd_cblk_t *p_thd )
 	/* change state to ready */
 	p_thd->state = THD_STATE_READY;
 
-	/*
-	 * If failed:
-	 * Invalid prio
-	 */
-	UTIL_ASSERT( p_thd->item_sch.tag < OSPORT_NUM_PRIOS );
-
-	/* put back on ready queue */
-	sch_qitem_enq_fifo( &p_thd->item_sch, &p_sch->q_ready[p_thd->item_sch.tag] );
+	sch_insert_ready( p_sch, &p_thd->item_sch );
 }
 
 /*
- * Block current thread
+ * Block current thread to optional resource list
  */
 UTIL_UNSAFE
-void sch_block_current( sch_cblk_t *p_sch, sch_qprio_t *p_q, void *p_schinfo,
-		uint_t timeout )
+void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
+		sch_cblk_t *p_sch )
 {
 	thd_cblk_t *p_thd;
-	uint_t counter, wakeup;
 
 	/*
 	 * If failed
@@ -598,7 +696,7 @@ void sch_block_current( sch_cblk_t *p_sch, sch_qprio_t *p_q, void *p_schinfo,
 	 * If failed:
 	 * Current thread not in a ready state
 	 */
-	UTIL_ASSERT( p_thd->state != THD_STATE_READY );
+	UTIL_ASSERT( p_thd->state == THD_STATE_READY );
 	UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
 	UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
 
@@ -606,112 +704,64 @@ void sch_block_current( sch_cblk_t *p_sch, sch_qprio_t *p_q, void *p_schinfo,
 
 	/* remove from ready list */
 	sch_qitem_remove( &p_thd->item_sch );
+
+	/* attach scheduling info */
 	p_thd->p_schinfo = p_schinfo;
 
 	/* insert into resource list, if any */
-	if( p_q != NULL )
-		sch_qitem_enq_prio( &p_thd->item_sch, p_q );
+	if( p_to != NULL )
+		sch_qitem_enq_prio( &p_thd->item_sch, p_to );
 
 	/* put onto delay queue */
 	if( timeout != 0)
-	{
-		/* calculate wakeup */
-		wakeup = p_sch->timestamp + timeout;
-		p_thd->item_delay.tag = wakeup;
+		sch_insert_delay( p_sch, &p_thd->item_delay, timeout );
 
-		/* overflowed */
-		if( wakeup < p_sch->timestamp )
-			sch_qitem_enq_prio( &p_thd->item_delay, p_sch->p_delayq_overflow );
-		else
-			sch_qitem_enq_prio( &p_thd->item_delay, p_sch->p_delayq_normal );
-	}
-
-	/* reschedule immediately */
-	for( counter = 0; counter < OSPORT_NUM_PRIOS; counter++ )
-	{
-		if( p_sch->q_ready[counter].p_head != NULL )
-			break;
-	}
-
-	/*
-	 * If failed:
-	 * Idle thread missing
-	 */
-	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
-
-	p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
-
-	/*
-	 * If failed:
-	 * Broken link
-	 */
-	UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_next != NULL );
-
-	p_sch->q_ready[counter].p_head =
-			p_sch->q_ready[counter].p_head->p_next;
-
-	OSPORT_CONTEXTSW_REQ();
+	sch_unload_current_req( p_sch );
 }
 
 /*
- * Remove thread from scheduler
- */
-UTIL_UNSAFE void sch_remove( sch_cblk_t *p_sch, thd_cblk_t *p_thd )
-{
-	uint_t counter;
-
-	/*
-	 * If failed:
-	 * Invalid parameters
-	 */
-	UTIL_ASSERT( p_sch != NULL );
-	UTIL_ASSERT( p_thd != NULL );
-
-	if( p_thd->item_sch.p_q != NULL )
-		sch_qitem_remove( &p_thd->item_sch );
-
-	if( p_thd->item_delay.p_q != NULL )
-		sch_qitem_remove( &p_thd->item_delay );
-
-	p_thd->p_schinfo = NULL;
-
-	if( p_thd == p_sch->p_current )
-	{
-		/* reschedule immediately */
-		for( counter = 0; counter < OSPORT_NUM_PRIOS; counter++ )
-		{
-			if( p_sch->q_ready[counter].p_head != NULL )
-				break;
-		}
-
-		/*
-		 * If failed:
-		 * Idle thread missing
-		 */
-		UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
-
-		p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
-
-		/*
-		 * If failed:
-		 * Broken link
-		 */
-		UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_next != NULL );
-
-		p_sch->q_ready[counter].p_head =
-				p_sch->q_ready[counter].p_head->p_next;
-
-		OSPORT_CONTEXTSW_REQ();
-	}
-}
-
-/*
- * Change scheduler prio
+ * Stop a thread
  */
 UTIL_UNSAFE
-void sch_change_prio( sch_cblk_t *p_sch, thd_cblk_t *p_thd, uint_t prio )
+void thd_suspend( thd_cblk_t *p_thd, sch_cblk_t *p_sch )
+{
+	/*
+	 * If failed:
+	 * NULL pointer passed to p_thd or p_sch
+	 */
+	UTIL_ASSERT( p_thd != NULL );
+	UTIL_ASSERT( p_sch != NULL );
+
+	if( p_thd->state != THD_STATE_SUSPENDED )
+	{
+		p_thd->state = THD_STATE_SUSPENDED;
+
+		/* remove scheduling item */
+		if( p_thd->item_sch.p_q != NULL )
+			sch_qitem_remove( &p_thd->item_sch );
+
+		/* remove delay item */
+		if( p_thd->item_delay.p_q != NULL )
+			sch_qitem_remove( &p_thd->item_delay );
+
+		/* remove scheduling info */
+		p_thd->p_schinfo = NULL;
+
+		if( p_thd == p_sch->p_current )
+		{
+			sch_unload_current_req(p_sch);
+		}
+	}
+}
+
+/*
+ * Change thread priority
+ */
+UTIL_UNSAFE
+void thd_change_prio( thd_cblk_t *p_thd, uint_t prio, sch_cblk_t *p_sch )
 {
 	sch_qprio_t *p_qprio;
+
 	/*
 	 * If failed:
 	 * Invalid parameter
@@ -735,29 +785,28 @@ void sch_change_prio( sch_cblk_t *p_sch, thd_cblk_t *p_thd, uint_t prio )
 		break;
 
 	case THD_STATE_READY:
-		/*
-		 * If failed:
-		 * Thread not queued
-		 */
-		UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
-		sch_qitem_remove( &p_thd->item_sch );
+
+		if( p_thd->item_sch.p_q != NULL )
+		{
+			sch_qitem_remove( &p_thd->item_sch );
+			sch_qitem_enq_fifo( &p_thd->item_sch, &p_sch->q_ready[prio]);
+		}
+
 		p_thd->item_sch.tag = prio;
-		sch_qitem_enq_fifo( &p_thd->item_sch, &p_sch->q_ready[prio]);
 
 		break;
 
 	case THD_STATE_BLOCKED:
 
-		/*
-		 * If failed:
-		 * Thread not queued
-		 */
-		UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
-
 		p_qprio = p_thd->item_sch.p_q;
-		sch_qitem_remove( &p_thd->item_sch );
+
+		if( p_qprio != NULL )
+			sch_qitem_remove( &p_thd->item_sch );
+
 		p_thd->item_sch.tag = prio;
-		sch_qitem_enq_prio( &p_thd->item_sch, p_qprio);
+
+		if(p_qprio != NULL )
+			sch_qitem_enq_prio( &p_thd->item_sch, p_qprio);
 
 		break;
 
@@ -771,97 +820,59 @@ void sch_change_prio( sch_cblk_t *p_sch, thd_cblk_t *p_thd, uint_t prio )
 	}
 }
 
-/**************************************************************************************
- * Internal thread functions
- **************************************************************************************/
-UTIL_SAFE void thd_return( void );
-
 /*
- * Create thread internally
+ * Create a thread using static memory
  */
-UTIL_SAFE
-void thd_create( thd_cblk_t *p_thd, uint_t prio, void *p_stack, uint_t stack_size,
-		void (*p_job)(void) )
-{
-	UTIL_LOCK_EVERYTHING();
-	thd_init( p_thd, prio, p_stack, stack_size, p_job, thd_return );
-	sch_ready( &g_sch, p_thd );
-	UTIL_UNLOCK_EVERYTHING();
-}
-
-/*
- * Start or resume a thread (reschedule)
- */
-UTIL_SAFE
-void thd_resume( thd_cblk_t *p_thd )
+UTIL_UNSAFE
+void thd_create_static(thd_cblk_t *p_thd, uint_t prio, void *p_stack,
+		uint_t stack_size, void (*p_job)(void), sch_cblk_t *p_sch)
 {
 	/*
 	 * If failed:
-	 * Invalid parameter
+	 * Invalid parameters
 	 */
-	UTIL_ASSERT( p_thd != NULL );
+	UTIL_ASSERT(p_thd != NULL);
+	UTIL_ASSERT(p_stack != NULL);
+	UTIL_ASSERT(stack_size != 0);
+	UTIL_ASSERT(p_job != NULL);
+	UTIL_ASSERT(prio < OSPORT_NUM_PRIOS);
 
-	UTIL_LOCK_EVERYTHING();
-
-	if( p_thd->state != THD_STATE_READY )
-	{
-		sch_ready(&g_sch, p_thd);
-		sch_reschedule( &g_sch );
-	}
-
-	UTIL_UNLOCK_EVERYTHING();
+	thd_init(p_thd, prio, p_stack, stack_size, p_job, thd_return_hook_static);
+	thd_ready( p_thd, p_sch );
 }
 
 /*
- * Stop a thread
+ * Delete a static thread
  */
 UTIL_UNSAFE
-void thd_suspend( thd_cblk_t *p_thd )
-{
-	/*
-	 * If failed:
-	 * Invalid parameter
-	 */
-	UTIL_ASSERT( p_thd != NULL );
-
-	UTIL_LOCK_EVERYTHING();
-
-	if( p_thd->state != THD_STATE_SUSPENDED )
-	{
-		sch_remove( &g_sch, p_thd );
-		p_thd->state = THD_STATE_SUSPENDED;
-	}
-
-	UTIL_UNLOCK_EVERYTHING();
-}
-
-/*
- * Delete a thread
- */
-UTIL_UNSAFE
-void thd_delete( thd_cblk_t *p_thd )
+void thd_delete_static(thd_cblk_t *p_thd, sch_cblk_t *p_sch)
 {
 	mblk_t *p_mblk;
 
 	/*
 	 * If failed:
-	 * Invalid parameter
+	 * Invalid parameters
 	 */
-	UTIL_ASSERT( p_thd != NULL );
-
-	UTIL_LOCK_EVERYTHING();
+	UTIL_ASSERT(p_thd != NULL );
+	UTIL_ASSERT(p_sch != NULL );
 
 	/*
-	 * If failed
-	 * Thread already deleted
+	 * If failed:
+	 * Thread killed twice
 	 */
 	UTIL_ASSERT( p_thd->state != THD_STATE_DELETED );
 
-	/* remove from scheduler */
-	sch_remove( &g_sch, p_thd );
 	p_thd->state = THD_STATE_DELETED;
 
-	/* free memory */
+	/* remove scheduling item */
+	if( p_thd->item_sch.p_q != NULL )
+		sch_qitem_remove( &p_thd->item_sch );
+
+	/* remove delay item */
+	if( p_thd->item_delay.p_q != NULL )
+		sch_qitem_remove( &p_thd->item_delay );
+
+	/* release memory */
 	while( p_thd->mlst.p_head != NULL )
 	{
 		p_mblk = p_thd->mlst.p_head;
@@ -869,67 +880,51 @@ void thd_delete( thd_cblk_t *p_thd )
 		mpool_insert( p_mblk, &g_mpool );
 	}
 
-	UTIL_UNLOCK_EVERYTHING();
+	p_thd->p_schinfo = NULL;
+
+	if( p_thd == p_sch->p_current )
+		sch_unload_current_req(p_sch);
 }
 
 /*
- * Internal thread return
+ * Static threads return here
  */
 UTIL_SAFE
-void thd_return( void )
+void thd_return_hook_static( void )
 {
+	thd_cblk_t *p_thd;
+
 	UTIL_LOCK_EVERYTHING();
-	thd_delete(g_sch.p_current);
-	UTIL_UNLOCK_EVERYTHING();
-}
 
-/*
- * Internal change priority
- */
-UTIL_SAFE
-void thd_change_prio( thd_cblk_t *p_thd, uint_t prio )
-{
+	p_thd = g_sch.p_current;
+
 	/*
 	 * If failed:
-	 * Invalid parameter
+	 * Invalid current thread
 	 */
-	UTIL_ASSERT( p_thd != NULL );
+	UTIL_ASSERT( p_thd != NULL)
 
-	UTIL_LOCK_EVERYTHING();
-	sch_change_prio( &g_sch, p_thd, prio );
+	thd_delete_static( p_thd, &g_sch);
+
+	/*
+	 * reschedule request doesn't get serviced until this
+	 * function exits
+	 */
 	UTIL_UNLOCK_EVERYTHING();
 }
 
-/*
- * Internal yield thread
- */
-UTIL_SAFE void thd_yield( void )
-{
-	UTIL_LOCK_EVERYTHING();
-	sch_reschedule( &g_sch );
-	UTIL_UNLOCK_EVERYTHING();
-}
-
-UTIL_SAFE void thd_delay( uint_t timeout )
-{
-	UTIL_LOCK_EVERYTHING();
-
-	if( timeout != 0)
-		sch_block_current( &g_sch, NULL, NULL, timeout );
-
-	UTIL_UNLOCK_EVERYTHING();
-}
-
-/**************************************************************************************
- * External thread functions
- **************************************************************************************/
 #include "../include/api.h"
 
-void os_thread_return( void );
-
-/*
- * Create a thread, allocating memory automatically
+/**
+ * @brief Create a thread, allocating memory automatically
+ * @param prio priority of the thread
+ * @param stack_size stack size
+ * @param p_job pointer to a job
+ * @retval 0 thread creation failed because of low memory
+ * @retval !0 handle to created thread
+ * @note This function can be used in interrupt or thread contexts.
  */
+UTIL_SAFE
 os_handle_t os_thread_create( os_uint_t prio, os_uint_t stack_size, void (*p_job)(void) )
 {
 	void *p_stack;
@@ -955,19 +950,20 @@ os_handle_t os_thread_create( os_uint_t prio, os_uint_t stack_size, void (*p_job
 			mpool_free(p_stack, &g_mpool);
 		else
 		{
-			thd_init( p_thd, prio, p_stack, stack_size, p_job, os_thread_return );
-			sch_ready( &g_sch, p_thd );
+			thd_init( p_thd, prio, p_stack, stack_size, p_job, thd_return_hook );
+			thd_ready( p_thd, &g_sch );
 		}
 	}
 
 	UTIL_UNLOCK_EVERYTHING();
-
 	return (os_handle_t)p_thd;
 }
 
-/*
- * Delete a thread, free all memory
+/**
+ * @brief Delete a thread, free all memory
+ * @param h_thread thread handle
  */
+UTIL_SAFE
 void os_thread_delete( os_handle_t h_thread )
 {
 	thd_cblk_t *p_thd;
@@ -979,151 +975,90 @@ void os_thread_delete( os_handle_t h_thread )
 	else
 		p_thd = (thd_cblk_t*)h_thread;
 
-	thd_delete(p_thd);
+	/*
+	 * If failed:
+	 * Invalid current thread
+	 */
+	UTIL_ASSERT(p_thd != NULL);
 
-	/* free stack and thread memory */
-	mpool_free( p_thd->p_stack, &g_mpool );
-	mpool_free(p_thd, &g_mpool );
-
-	UTIL_UNLOCK_EVERYTHING();
-}
-
-/*
- * Suspend thread
- */
-void os_thread_suspend( os_handle_t h_thread )
-{
-	thd_cblk_t *p_thd;
-
-	UTIL_LOCK_EVERYTHING();
-
-	if( h_thread == 0)
-		p_thd = g_sch.p_current;
-	else
-		p_thd = (thd_cblk_t*)h_thread;
-
-	UTIL_UNLOCK_EVERYTHING();
-
-	thd_suspend(p_thd);
-}
-
-/*
- * Resume thread
- */
-void os_thread_resume( os_handle_t h_thread )
-{
-	thd_cblk_t *p_thd;
+	thd_delete_static( p_thd, &g_sch);
 
 	/*
 	 * If failed:
-	 * Thread cannot resume itself
+	 * stack lost
 	 */
-	UTIL_ASSERT( h_thread != 0);
+	UTIL_ASSERT( p_thd->p_stack != NULL );
 
-	p_thd = (thd_cblk_t*)h_thread;
+	/* free memory */
+	mpool_free(p_thd->p_stack, &g_mpool);
+	mpool_free(p_thd, &g_mpool);
 
-	thd_resume(p_thd);
-}
-
-/*
- * Obtain state of thread
- */
-os_thread_state_t os_thread_get_state( os_handle_t h_thread )
-{
-	thd_cblk_t *p_thd;
-	os_thread_state_t ret;
-
-	UTIL_LOCK_EVERYTHING();
-
-	if( h_thread == 0)
-		p_thd = g_sch.p_current;
-	else
-		p_thd = (thd_cblk_t*)h_thread;
-
-	ret = (os_thread_state_t)p_thd->state;
-
+	/*
+	 * reschedule won't happen until this function returns
+	 */
 	UTIL_UNLOCK_EVERYTHING();
-
-	return ret;
 }
 
 /*
- * Get current thread handle
+ * Thread created by os_thread_create will return here
  */
-os_handle_t os_thread_get_current( void )
+UTIL_SAFE
+void thd_return_hook( void )
 {
-	thd_cblk_t *p_thd;
+	/* delete myself */
+	os_thread_delete(0);
+}
 
+/**
+ * @brief Enters an exclusive critical section
+ * @note This function can be used in a thread or
+ * interrupt context
+ */
+UTIL_SAFE
+void os_enter_critical( void )
+{
 	UTIL_LOCK_EVERYTHING();
-	p_thd = g_sch.p_current;
-	UTIL_UNLOCK_EVERYTHING();
-
-	return (os_handle_t)p_thd;
 }
 
-/*
- * Set thread priority
+/**
+ * @brief Exits an exclusive critical section
+ * @note This function can be used in a thread or
+ * interrupt context.
  */
-void os_thread_set_priority( os_handle_t h_thread, os_uint_t prio )
+UTIL_SAFE
+void os_exit_critical( void )
 {
-	thd_cblk_t *p_thd;
+	UTIL_UNLOCK_EVERYTHING();
+}
 
+/**
+ * @brief Handle heart beat
+ * @note This function can be used in a thread
+ * or interrupt context
+ */
+UTIL_SAFE
+void os_handle_heartbeat( void )
+{
 	UTIL_LOCK_EVERYTHING();
-
-	if( h_thread == 0)
-		p_thd = g_sch.p_current;
-	else
-		p_thd = (thd_cblk_t*)h_thread;
-
+	sch_handle_heartbeat(&g_sch);
 	UTIL_UNLOCK_EVERYTHING();
-
-	thd_change_prio(p_thd, prio);
 }
 
-/*
- * Get thread priority
+/**
+ * @brief Returns current OS time in ticks
+ * @note This function can be used in a thread or
+ * interrupt context.
  */
-os_uint_t os_thread_get_priority( os_handle_t h_thread )
+UTIL_SAFE
+os_uint_t os_get_heartbeat_counter( void )
 {
-	thd_cblk_t *p_thd;
 	os_uint_t ret;
 
 	UTIL_LOCK_EVERYTHING();
-
-	if( h_thread == 0)
-		p_thd = g_sch.p_current;
-	else
-		p_thd = (thd_cblk_t*)h_thread;
-
-	ret = p_thd->item_sch.tag;
-
+	ret = g_sch.timestamp;
 	UTIL_UNLOCK_EVERYTHING();
 
 	return ret;
-}
-
-/*
- * Request reschedule
- */
-void os_thread_yield( void )
-{
-	thd_yield();
-}
-
-/*
- * Sleep for sometime
- */
-void os_thread_delay( os_uint_t timeout )
-{
-	thd_delay(timeout);
-}
-
-/*
- * Thread return hook
- */
-void os_thread_return( void )
-{
-	os_thread_delete(0);
 }
 
 /**
@@ -1167,53 +1102,172 @@ void os_start( void )
 }
 
 /**
- * @brief Handle heart beat
- * @note This function can be used in a thread
- * or interrupt context
+ * @brief Request reschedule
  */
 UTIL_SAFE
-void os_handle_heartbeat( void )
+void os_thread_yield( void )
 {
 	UTIL_LOCK_EVERYTHING();
-	sch_heartbeat(&g_sch);
+	sch_reschedule_req(&g_sch);
 	UTIL_UNLOCK_EVERYTHING();
 }
 
 /**
- * @brief Returns current OS time in ticks
- * @note This function can be used in a thread or
- * interrupt context.
+ * @brief Sleep and then join the ready queue
+ * @param timeout time in ticks to sleep
  */
 UTIL_SAFE
-os_uint_t os_get_heartbeat_counter( void )
+void os_thread_delay( os_uint_t timeout )
 {
+	if( timeout != 0)
+	{
+		UTIL_LOCK_EVERYTHING();
+		thd_block_current(NULL, NULL, timeout, &g_sch);
+		UTIL_UNLOCK_EVERYTHING();
+	}
+}
+
+/**
+ * @brief Get thread priority
+ * @param h_thread thread handle, pass 0 for current thread
+ * @return priority of h_thread
+ */
+UTIL_SAFE
+os_uint_t os_thread_get_priority( os_handle_t h_thread )
+{
+	thd_cblk_t *p_thd;
 	os_uint_t ret;
 
 	UTIL_LOCK_EVERYTHING();
-	ret = g_sch.timestamp;
+
+	if( h_thread == 0)
+		p_thd = g_sch.p_current;
+	else
+		p_thd = (thd_cblk_t*)h_thread;
+
+	/*
+	 * If failed:
+	 * Invalid priority
+	 */
+	UTIL_ASSERT( p_thd->item_sch.tag < OSPORT_NUM_PRIOS );
+
+	ret = p_thd->item_sch.tag;
+
 	UTIL_UNLOCK_EVERYTHING();
 
 	return ret;
 }
 
 /**
- * @brief Enters an exclusive critical section
- * @note This function can be used in a thread or
- * interrupt context
+ * @brief Get current thread handle
+ * @return current thread handle
  */
 UTIL_SAFE
-void os_enter_critical( void )
+os_handle_t os_thread_get_current( void )
 {
+	thd_cblk_t *p_thd;
+
 	UTIL_LOCK_EVERYTHING();
+
+	/*
+	 * If failed:
+	 * Invalid current thread
+	 */
+	UTIL_ASSERT( g_sch.p_current != NULL );
+
+	p_thd = g_sch.p_current;
+	UTIL_UNLOCK_EVERYTHING();
+
+	return (os_handle_t)p_thd;
 }
 
 /**
- * @brief Exits an exclusive critical section
- * @note This function can be used in a thread or
- * interrupt context.
+ * @brief Obtain state of thread
+ * @param h_thread thread handle, pass 0 for current thread
+ * @return state of the thread
  */
 UTIL_SAFE
-void os_exit_critical( void )
+os_thread_state_t os_thread_get_state( os_handle_t h_thread )
 {
+	thd_cblk_t *p_thd;
+	os_thread_state_t ret;
+
+	UTIL_LOCK_EVERYTHING();
+
+	if( h_thread == 0)
+		p_thd = g_sch.p_current;
+	else
+		p_thd = (thd_cblk_t*)h_thread;
+
+	ret = (os_thread_state_t)p_thd->state;
+
+	UTIL_UNLOCK_EVERYTHING();
+
+	return ret;
+}
+
+/**
+ * @brief Suspend thread
+ * @param h_thread thread to suspend, pass 0 to current thread
+ */
+UTIL_SAFE
+void os_thread_suspend( os_handle_t h_thread )
+{
+	thd_cblk_t *p_thd;
+
+	UTIL_LOCK_EVERYTHING();
+
+	if( h_thread == 0)
+		p_thd = g_sch.p_current;
+	else
+		p_thd = (thd_cblk_t*)h_thread;
+
+	thd_suspend(p_thd, &g_sch);
+
 	UTIL_UNLOCK_EVERYTHING();
 }
+
+/**
+ * @brief Resume thread
+ * @param h_thread thread to resume, must be non zero
+ */
+UTIL_SAFE
+void os_thread_resume( os_handle_t h_thread )
+{
+	thd_cblk_t *p_thd;
+
+	/*
+	 * If failed:
+	 * Thread cannot resume itself
+	 */
+	UTIL_ASSERT( h_thread != 0);
+
+	p_thd = (thd_cblk_t*)h_thread;
+
+	UTIL_LOCK_EVERYTHING();
+	thd_ready( p_thd, &g_sch );
+	UTIL_UNLOCK_EVERYTHING();
+}
+
+
+/**
+ * @brief Set thread priority
+ * @param h_thread handle to thread to set priority, pass 0 for current
+ * thread
+ * @param prio priority
+ */
+void os_thread_set_priority( os_handle_t h_thread, os_uint_t prio )
+{
+	thd_cblk_t *p_thd;
+
+	UTIL_LOCK_EVERYTHING();
+
+	if( h_thread == 0)
+		p_thd = g_sch.p_current;
+	else
+		p_thd = (thd_cblk_t*)h_thread;
+
+	thd_change_prio(p_thd, prio, &g_sch);
+	UTIL_UNLOCK_EVERYTHING();
+}
+

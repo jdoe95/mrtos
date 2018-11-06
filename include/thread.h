@@ -144,10 +144,9 @@ struct thd_cblk_s
 	struct sch_qitem_s item_sch;      /* scheduling item        */
 	struct sch_qitem_s item_delay;    /* delay item             */
 	struct mlst_s mlst;				  /* memory list 			*/
-	void *p_stack;					  /* stack memory 		    */
+	void *volatile p_stack;			  /* stack memory 		    */
 	void *volatile p_schinfo;         /* scheduling info        */
 };
-
 
 /*
  * Scheduler functions
@@ -157,28 +156,7 @@ UTIL_UNSAFE void sch_reschedule_req( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_unload_current_req( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_handle_heartbeat( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_insert_ready( sch_cblk_t *p_sch, sch_qitem_t *p_item );
-UTIL_UNSAFE void sch_insert_delay( sch_cblk_t *p_sch, sch_qitem_t *p_item );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-UTIL_UNSAFE void sch_remove( sch_cblk_t *p_sch, thd_cblk_t *p_thd );
-
-
-
-
-
-UTIL_UNSAFE void sch_block_current( sch_cblk_t *p_sch, sch_qprio_t *p_q, void *p_schinfo, uint_t timeout );
+UTIL_UNSAFE void sch_insert_delay( sch_cblk_t *p_sch, sch_qitem_t *p_item, uint_t timeout );
 
 /*
  * Thread functions
@@ -186,24 +164,21 @@ UTIL_UNSAFE void sch_block_current( sch_cblk_t *p_sch, sch_qprio_t *p_q, void *p
 UTIL_UNSAFE void thd_init( thd_cblk_t *p_thd, uint_t prio, void *p_stack,
 		uint_t stack_size, void (*p_job)(void), void (*p_return)(void) );
 
+UTIL_UNSAFE void thd_ready(thd_cblk_t *p_thd, sch_cblk_t *p_sch);
+UTIL_UNSAFE void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
+		sch_cblk_t *p_sch );
 
-UTIL_UNSAFE void sch_ready( sch_cblk_t *p_sch, thd_cblk_t *p_thd );
-
-UTIL_UNSAFE void sch_remove( sch_cblk_t *p_sch, thd_cblk_t *p_thd );
-UTIL_UNSAFE void sch_change_prio( sch_cblk_t *p_sch, thd_cblk_t *p_thd, uint_t prio );
+UTIL_UNSAFE void thd_suspend( thd_cblk_t *p_thd, sch_cblk_t *p_sch );
+UTIL_UNSAFE void thd_change_prio( thd_cblk_t *p_thd, uint_t prio, sch_cblk_t *p_sch );
 
 /*
- * Internal thread functions
+ * Internal thread creation and deletion
  */
-UTIL_SAFE void thd_create( thd_cblk_t *p_thd, uint_t prio, void *p_stack, uint_t stack_size,
-		void (*p_job)(void) );
-UTIL_SAFE void thd_delete( thd_cblk_t *p_thd );
-UTIL_SAFE void thd_suspend( thd_cblk_t *p_thd );
-UTIL_SAFE void thd_resume( thd_cblk_t *p_thd );
-UTIL_SAFE void thd_start( thd_cblk_t *p_thd );
-UTIL_SAFE void thd_change_prio( thd_cblk_t *p_thd, uint_t prio );
-UTIL_SAFE void thd_yield( void );
-UTIL_SAFE void thd_delay( uint_t timeout );
+UTIL_UNSAFE void thd_create_static(thd_cblk_t *p_thd, uint_t prio, void *p_stack,
+		uint_t stack_size, void (*p_job)(void), sch_cblk_t *p_sch);
+UTIL_UNSAFE void thd_delete_static(thd_cblk_t *p_thd, sch_cblk_t *p_sch);
 
+UTIL_SAFE void thd_return_hook_static( void );
+UTIL_SAFE void thd_return_hook( void );
 
 #endif /* H22A9CDB9_7059_460F_BAEE_7953ABC94E21 */

@@ -84,5 +84,5 @@ void os_init( const os_config_t *p_config )
 			OSPORT_IDLE_STACK_SIZE, OSPORT_IDLE_FUNC, OSPORT_IDLE_FUNC);
 
 	/* install idle thread */
-	sch_ready( &g_sch, &g_thd_idle);
+	thd_ready(&g_thd_idle, &g_sch);
 }
