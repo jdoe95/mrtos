@@ -30,7 +30,6 @@
 #include "../include/memory.h"
 #include "../include/list.h"
 #include "../include/global.h"
-#include "../include/api.h"
 
 /*
  * Check the alignment of a size or address
@@ -629,6 +628,8 @@ void mpool_gather_info( const mpool_t *p_mpool, mpool_info_t *p_info)
 	p_info->count = count;
 	p_info->size = size;
 }
+
+#include "../include/api.h"
 
 /**
  * @brief Allocates a continuous memory block to the calling thread
