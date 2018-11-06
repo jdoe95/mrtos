@@ -924,9 +924,9 @@ void os_thread_suspend( os_handle_t h_thread )
 	else
 		p_thd = (thd_cblk_t*)h_thread;
 
-	thd_suspend(p_thd);
-
 	UTIL_UNLOCK_EVERYTHING();
+
+	thd_suspend(p_thd);
 }
 
 /*
@@ -997,9 +997,9 @@ void os_thread_set_priority( os_handle_t h_thread, os_uint_t prio )
 	else
 		p_thd = (thd_cblk_t*)h_thread;
 
-	thd_change_prio(p_thd, prio);
-
 	UTIL_UNLOCK_EVERYTHING();
+
+	thd_change_prio(p_thd, prio);
 }
 
 /*
