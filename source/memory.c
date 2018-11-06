@@ -277,6 +277,7 @@ void mpool_insert( mblk_t *p_mblk, mpool_t *p_mpool )
 			 * Broken link
 			 */
 			UTIL_ASSERT( p_i != NULL );
+			UTIL_ASSERT( p_i->p_next != NULL );
 			UTIL_ASSERT( p_i->p_next->p_prev == p_i);
 
 			/* find block with larger start address */
@@ -476,6 +477,7 @@ void *mpool_alloc( uint_t size, mpool_t *p_mpool, mlst_t *p_mlst )
 			 * Broken link
 			 */
 			UTIL_ASSERT( p_i != NULL );
+			UTIL_ASSERT( p_i->p_next != NULL );
 			UTIL_ASSERT( p_i->p_next->p_prev == p_i );
 
 			/* encounter a large block */

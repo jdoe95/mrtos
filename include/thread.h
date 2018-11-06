@@ -152,14 +152,43 @@ struct thd_cblk_s
 /*
  * Scheduler functions
  */
+UTIL_UNSAFE void sch_init( sch_cblk_t *p_sch );
+UTIL_UNSAFE void sch_reschedule_req( sch_cblk_t *p_sch );
+UTIL_UNSAFE void sch_unload_current_req( sch_cblk_t *p_sch );
+UTIL_UNSAFE void sch_handle_heartbeat( sch_cblk_t *p_sch );
+UTIL_UNSAFE void sch_insert_ready( sch_cblk_t *p_sch, sch_qitem_t *p_item );
+UTIL_UNSAFE void sch_insert_delay( sch_cblk_t *p_sch, sch_qitem_t *p_item );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+UTIL_UNSAFE void sch_remove( sch_cblk_t *p_sch, thd_cblk_t *p_thd );
+
+
+
+
+
+UTIL_UNSAFE void sch_block_current( sch_cblk_t *p_sch, sch_qprio_t *p_q, void *p_schinfo, uint_t timeout );
+
+/*
+ * Thread functions
+ */
 UTIL_UNSAFE void thd_init( thd_cblk_t *p_thd, uint_t prio, void *p_stack,
 		uint_t stack_size, void (*p_job)(void), void (*p_return)(void) );
-UTIL_UNSAFE void sch_init( sch_cblk_t *p_sch );
-UTIL_UNSAFE void sch_reschedule( sch_cblk_t *p_sch );
-UTIL_UNSAFE void sch_heartbeat( sch_cblk_t *p_sch );
+
+
 UTIL_UNSAFE void sch_ready( sch_cblk_t *p_sch, thd_cblk_t *p_thd );
-UTIL_UNSAFE void sch_block_current( sch_cblk_t *p_sch, sch_qprio_t *p_q,
-		void *p_schinfo, uint_t timeout );
+
 UTIL_UNSAFE void sch_remove( sch_cblk_t *p_sch, thd_cblk_t *p_thd );
 UTIL_UNSAFE void sch_change_prio( sch_cblk_t *p_sch, thd_cblk_t *p_thd, uint_t prio );
 

@@ -166,6 +166,8 @@ void sch_qitem_enq_prio( sch_qitem_t *p_item, sch_qprio_t *p_q )
 			 * Broken link
 			 */
 			UTIL_ASSERT( p_i != NULL );
+			UTIL_ASSERT( p_i->p_next != NULL );
+			UTIL_ASSERT( p_i->p_next->p_prev == p_i );
 
 			if( p_item->tag < p_i->tag )
 			{
@@ -293,38 +295,11 @@ void sch_init( sch_cblk_t *p_sch )
 }
 
 /*
- * Initialize a thread control block (create a thread)
+ * Reschedule threads, request context switch if
+ * needed
  */
 UTIL_UNSAFE
-void thd_init( thd_cblk_t *p_thd, uint_t prio, void *p_stack, uint_t stack_size,
-		void (*p_job)(void), void (*p_return)(void) )
-{
-	/*
-	 * If failed:
-	 * Invalid parameters
-	 */
-	UTIL_ASSERT(p_thd != NULL);
-	UTIL_ASSERT(p_stack != NULL );
-	UTIL_ASSERT( stack_size != 0);
-	UTIL_ASSERT( p_job != NULL );
-	UTIL_ASSERT( p_return != NULL );
-	UTIL_ASSERT( prio < OSPORT_NUM_PRIOS );
-
-	p_thd->p_stack = p_stack;
-	p_thd->p_sp = OSPORT_INIT_STACK(p_stack, stack_size, p_job, p_return );
-	p_thd->state = THD_STATE_READY;
-	p_thd->p_schinfo = NULL;
-
-	sch_qitem_init( &p_thd->item_sch, p_thd, prio );
-	sch_qitem_init( &p_thd->item_delay, p_thd, 0 );
-	mlst_init( &p_thd->mlst );
-}
-
-/*
- * Reschedule threads
- */
-UTIL_UNSAFE
-void sch_reschedule( sch_cblk_t *p_sch )
+void sch_reschedule_req( sch_cblk_t *p_sch )
 {
 	uint_t counter;
 
@@ -364,10 +339,58 @@ void sch_reschedule( sch_cblk_t *p_sch )
 }
 
 /*
+ * Unload current thread, similar to reschedule, but doesn't
+ * compare priority, always generates context switch request
+ */
+UTIL_UNSAFE
+void sch_unload_current_req( sch_cblk_t *p_sch )
+{
+	uint_t counter;
+
+	/*
+	 * If failed:
+	 * NULL pointer passed to p_sch
+	 */
+	UTIL_ASSERT( p_sch != NULL );
+
+	for( counter = 0; counter < OSPORT_NUM_PRIOS; counter++ )
+	{
+		if( p_sch->q_ready[counter].p_head != NULL )
+			break;
+	}
+
+	/*
+	 * If failed:
+	 * Idle thread missing
+	 */
+	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
+
+	p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
+
+	/*
+	 * If failed:
+	 * Current thread being scheduled again after unloading it
+	 * Make sure to remove it from the scheduler first
+	 */
+	UTIL_ASSERT( p_sch->p_next != p_sch->p_current );
+
+	/*
+	 * If failed:
+	 * Broken link
+	 */
+	UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_next != NULL);
+
+	p_sch->q_ready[counter].p_head =
+			p_sch->q_ready[counter].p_head->p_next;
+
+	OSPORT_CONTEXTSW_REQ();
+}
+
+/*
  * Handle heart beat
  */
 UTIL_UNSAFE
-void sch_heartbeat( sch_cblk_t *p_sch )
+void sch_handle_heartbeat( sch_cblk_t *p_sch )
 {
 	sch_qprio_t *p_q_temp;
 	uint_t timestamp;
@@ -417,12 +440,7 @@ void sch_heartbeat( sch_cblk_t *p_sch )
 			/* obtain thread */
 			p_thd = p_item->p_thd;
 
-			/*
-			 * If failed:
-			 * cannot obtain thread from delay item
-			 */
-			UTIL_ASSERT( p_thd != NULL );
-
+			/* TODO */
 			sch_ready( p_sch, p_thd);
 		}
 		else
@@ -458,6 +476,66 @@ void sch_heartbeat( sch_cblk_t *p_sch )
 		OSPORT_CONTEXTSW_REQ();
 	}
 }
+
+/*
+ * Insert an item onto the ready queue
+ */
+UTIL_UNSAFE void sch_insert_ready( sch_cblk_t *p_sch, sch_qitem_t *p_item )
+{
+	/*
+	 *
+	 */
+}
+
+UTIL_UNSAFE void sch_insert_delay( sch_cblk_t *p_sch, sch_qitem_t *p_item )
+{
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+ * Initialize a thread control block (create a thread)
+ */
+UTIL_UNSAFE
+void thd_init( thd_cblk_t *p_thd, uint_t prio, void *p_stack, uint_t stack_size,
+		void (*p_job)(void), void (*p_return)(void) )
+{
+	/*
+	 * If failed:
+	 * Invalid parameters
+	 */
+	UTIL_ASSERT(p_thd != NULL);
+	UTIL_ASSERT(p_stack != NULL );
+	UTIL_ASSERT( stack_size != 0);
+	UTIL_ASSERT( p_job != NULL );
+	UTIL_ASSERT( p_return != NULL );
+	UTIL_ASSERT( prio < OSPORT_NUM_PRIOS );
+
+	p_thd->p_stack = p_stack;
+	p_thd->p_sp = OSPORT_INIT_STACK(p_stack, stack_size, p_job, p_return );
+	p_thd->state = THD_STATE_READY;
+	p_thd->p_schinfo = NULL;
+
+	sch_qitem_init( &p_thd->item_sch, p_thd, prio );
+	sch_qitem_init( &p_thd->item_delay, p_thd, 0 );
+	mlst_init( &p_thd->mlst );
+}
+
+
+
 
 /*
  * Ready a thread
