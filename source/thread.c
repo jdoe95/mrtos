@@ -1037,19 +1037,6 @@ void os_exit_critical( void )
 }
 
 /**
- * @brief Handle heart beat
- * @note This function can be used in a thread
- * or interrupt context
- */
-UTIL_SAFE
-void os_handle_heartbeat( void )
-{
-	UTIL_LOCK_EVERYTHING();
-	sch_handle_heartbeat(&g_sch);
-	UTIL_UNLOCK_EVERYTHING();
-}
-
-/**
  * @brief Returns current OS time in ticks
  * @note This function can be used in a thread or
  * interrupt context.

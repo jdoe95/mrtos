@@ -37,7 +37,6 @@ typedef struct {
 
 void os_init( const os_config_t *p_config );
 void os_start( void );
-void os_handle_heartbeat( void );
 os_uint_t os_get_heartbeat_counter( void );
 void os_enter_critical( void );
 void os_exit_critical( void );
