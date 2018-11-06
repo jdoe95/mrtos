@@ -498,6 +498,8 @@ void *mpool_alloc( uint_t size, mpool_t *p_mpool, mlst_t *p_mlst )
 				break;
 			}
 
+			p_i = p_i->p_next;
+
 		} while( p_i != p_mpool->p_alloc_head );
 	}
 
