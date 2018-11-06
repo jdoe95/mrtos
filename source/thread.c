@@ -352,7 +352,8 @@ void sch_reschedule_req( sch_cblk_t *p_sch )
 		p_sch->q_ready[counter].p_head =
 				p_sch->q_ready[counter].p_head->p_next;
 
-		OSPORT_CONTEXTSW_REQ();
+		if( p_sch->p_current != p_sch->p_next )
+			OSPORT_CONTEXTSW_REQ();
 	}
 }
 
@@ -459,7 +460,7 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 	{
 		p_item = p_sch->p_delayq_normal->p_head;
 
-		if( p_item->tag >= timestamp )
+		if( timestamp >= p_item->tag )
 		{
 			/*
 			 * If failed:
@@ -520,7 +521,8 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 		p_sch->q_ready[counter].p_head =
 				p_sch->q_ready[counter].p_head->p_next;
 
-		OSPORT_CONTEXTSW_REQ();
+		if( p_sch->p_current != p_sch->p_next )
+			OSPORT_CONTEXTSW_REQ();
 	}
 }
 
