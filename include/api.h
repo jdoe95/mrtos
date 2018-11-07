@@ -87,6 +87,14 @@ os_uint_t os_thread_get_priority( os_handle_t h_thread );
 void os_thread_yield( void );
 void os_thread_delay( os_uint_t timeout );
 
+os_handle_t os_semaphore_create( os_uint_t initial);
+void os_semaphore_delete( os_handle_t h_sem );
+void os_semaphore_reset( os_handle_t h_sem, os_uint_t initial );
+os_uint_t os_semaphore_get_counter( os_handle_t h_sem );
+void os_semaphore_post( os_handle_t h_sem );
+os_bool_t os_semaphore_wait( os_handle_t h_sem, os_uint_t timeout );
+os_bool_t os_semaphore_wait_nonblocking( os_handle_t h_sem );
+os_bool_t os_semaphore_peek_wait( os_handle_t h_sem );
 
 
 #endif /* H1CB9096F_13C2_4118_B608_F147C53BE57D */
