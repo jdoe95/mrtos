@@ -1107,6 +1107,12 @@ void os_thread_yield( void )
 UTIL_SAFE
 void os_thread_delay( os_uint_t timeout )
 {
+	/*
+	 * If failed:
+	 * Sleeping with lock held
+	 */
+	UTIL_ASSERT( g_int_depth == 0);
+
 	if( timeout != 0)
 	{
 		UTIL_LOCK_EVERYTHING();

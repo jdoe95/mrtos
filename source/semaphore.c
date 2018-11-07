@@ -330,15 +330,24 @@ os_bool_t os_semaphore_wait(os_handle_t h_sem, os_uint_t timeout)
 	{
 		p_sem->counter--;
 		ret = true;
+
+		UTIL_UNLOCK_EVERYTHING();
 	}
 	else
 	{
 		sem_schinfo_init(&schinfo);
+
 		thd_block_current_req( &p_sem->q_wait, &schinfo, timeout, &g_sch);
+		UTIL_UNLOCK_EVERYTHING();
+
+		/*
+		 * If failed:
+		 * sleeping with lock held
+		 */
+		UTIL_ASSERT( g_int_depth == 0 );
+
 		ret = schinfo.result;
 	}
-
-	UTIL_UNLOCK_EVERYTHING();
 
 	return ret;
 }
