@@ -54,7 +54,7 @@ struct sem_cblk_s
  */
 struct sem_schinfo_s
 {
-	bool_t result; /* wait result */
+	volatile bool_t result; /* wait result */
 };
 
 /*
