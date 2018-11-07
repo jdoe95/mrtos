@@ -797,6 +797,7 @@ void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 	UTIL_ASSERT( p_thd->state == THD_STATE_READY );
 	UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
 	UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
+	UTIL_ASSERT( p_thd->p_schinfo = NULL);
 }
 
 /*
@@ -838,6 +839,7 @@ void thd_suspend( thd_cblk_t *p_thd, sch_cblk_t *p_sch )
 			UTIL_ASSERT( p_thd->state == THD_STATE_READY );
 			UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
 			UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
+			UTIL_ASSERT( p_thd->p_schinfo == NULL );
 		}
 	}
 }
@@ -980,6 +982,7 @@ void thd_delete_static(thd_cblk_t *p_thd, sch_cblk_t *p_sch)
 		UTIL_ASSERT( p_thd->state == THD_STATE_READY );
 		UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
 		UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
+		UTIL_ASSERT( p_thd->p_schinfo == NULL );
 	}
 }
 
@@ -1205,6 +1208,7 @@ void os_thread_yield( void )
 	UTIL_ASSERT( g_sch.p_current->state == THD_STATE_READY );
 	UTIL_ASSERT( g_sch.p_current->item_sch.p_q != NULL );
 	UTIL_ASSERT( g_sch.p_current->item_delay.p_q == NULL );
+	UTIL_ASSERT( g_sch.p_current->p_schinfo == NULL );
 
 	UTIL_UNLOCK_EVERYTHING();
 }

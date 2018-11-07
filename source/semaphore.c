@@ -26,6 +26,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *****************************************************************************/
 #include "../include/semaphore.h"
+#include "../include/thread.h"
 #include "../include/global.h"
 
 /*
