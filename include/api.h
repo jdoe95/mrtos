@@ -96,5 +96,16 @@ os_bool_t os_semaphore_wait( os_handle_t h_sem, os_uint_t timeout );
 os_bool_t os_semaphore_wait_nonblocking( os_handle_t h_sem );
 os_bool_t os_semaphore_peek_wait( os_handle_t h_sem );
 
+os_handle_t os_mutex_create( void );
+void os_mutex_delete( os_handle_t h_mutex );
+os_bool_t os_mutex_peek_lock( os_handle_t h_mutex );
+os_bool_t os_mutex_peek_lock_recursive( os_handle_t h_mutex);
+os_bool_t os_mutex_is_locked( os_handle_t h_mutex );
+os_bool_t os_mutex_lock_nonblocking( os_handle_t h_mutex );
+os_bool_t os_mutex_lock_recursive_nonblocking( os_handle_t h_mutex );
+os_bool_t os_mutex_lock( os_handle_t h_mutex, os_uint_t timeout );
+os_bool_t os_mutex_lock_recursive( os_handle_t h_mutex, os_uint_t timeout );
+void os_mutex_unlock( os_handle_t h_mutex );
+
 
 #endif /* H1CB9096F_13C2_4118_B608_F147C53BE57D */
