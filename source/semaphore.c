@@ -243,14 +243,14 @@ void os_semaphore_post( os_handle_t h_sem )
 		((sem_schinfo_t*)(p_thd->p_schinfo))->result = true;
 
 		thd_ready( p_thd, &g_sch );
+
+		sch_reschedule_req(&g_sch);
 	}
 	else
 	{
 		/* no other threads are blocking. */
 		p_sem->counter++;
 	}
-
-	sch_reschedule_req(&g_sch);
 
 	UTIL_UNLOCK_EVERYTHING();
 }
