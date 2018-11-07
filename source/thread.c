@@ -670,7 +670,7 @@ void thd_ready( thd_cblk_t *p_thd, sch_cblk_t *p_sch )
  * Block current thread to optional resource list
  */
 UTIL_UNSAFE
-void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
+void thd_block_current_req( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 		sch_cblk_t *p_sch )
 {
 	thd_cblk_t *p_thd;
@@ -1110,7 +1110,7 @@ void os_thread_delay( os_uint_t timeout )
 	if( timeout != 0)
 	{
 		UTIL_LOCK_EVERYTHING();
-		thd_block_current(NULL, NULL, timeout, &g_sch);
+		thd_block_current_req(NULL, NULL, timeout, &g_sch);
 		UTIL_UNLOCK_EVERYTHING();
 	}
 }

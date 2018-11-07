@@ -334,7 +334,7 @@ os_bool_t os_semaphore_wait(os_handle_t h_sem, os_uint_t timeout)
 	else
 	{
 		sem_schinfo_init(&schinfo);
-		thd_block_current( &p_sem->q_wait, &schinfo, timeout, &g_sch);
+		thd_block_current_req( &p_sem->q_wait, &schinfo, timeout, &g_sch);
 		ret = schinfo.result;
 	}
 
