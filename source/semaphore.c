@@ -55,7 +55,6 @@ void sem_schinfo_init( sem_schinfo_t *p_schinfo )
 	 * NULL pointer passed to p_schinfo
 	 */
 	UTIL_ASSERT( p_schinfo != NULL );
-
 	p_schinfo->result = false;
 }
 
