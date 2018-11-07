@@ -68,9 +68,10 @@ void sem_delete_static( sem_cblk_t *p_sem, sch_cblk_t *p_sch )
 
 	/*
 	 * If failed:
-	 * NULL pointer passed to p_sem
+	 * NULL pointer passed to p_sem or p_sch
 	 */
 	UTIL_ASSERT( p_sem != NULL );
+	UTIL_ASSERT(p_sch != NULL);
 
 	/* ready all waiting threads */
 	while( p_sem->q_wait.p_head != NULL )
