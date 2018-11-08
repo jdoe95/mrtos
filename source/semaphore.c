@@ -340,12 +340,6 @@ os_bool_t os_semaphore_wait(os_handle_t h_sem, os_uint_t timeout)
 		thd_block_current_req( &p_sem->q_wait, &schinfo, timeout, &g_sch);
 		UTIL_UNLOCK_EVERYTHING();
 
-		/*
-		 * If failed:
-		 * sleeping with lock held
-		 */
-		UTIL_ASSERT( g_int_depth == 0 );
-
 		ret = schinfo.result;
 	}
 
