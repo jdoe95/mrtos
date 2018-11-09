@@ -37,6 +37,7 @@ typedef struct {
 
 void      os_init                 ( const os_config_t *p_config );
 void      os_start                ( void );
+void      os_handle_heartbeat     ( void );
 os_uint_t os_get_heartbeat_counter( void );
 void      os_enter_critical       ( void );
 void      os_exit_critical        ( void );
@@ -99,6 +100,19 @@ os_bool_t   os_mutex_is_locked                 ( os_handle_t h_mutex );
 os_bool_t   os_mutex_lock_nonblocking          ( os_handle_t h_mutex );
 os_bool_t   os_mutex_lock                      ( os_handle_t h_mutex, os_uint_t timeout );
 void        os_mutex_unlock                    ( os_handle_t h_mutex );
+
+os_handle_t     os_queue_create             (os_uint_t size );
+void            os_queue_delete             (os_handle_t queue );
+void            os_queue_reset              (os_handle_t queue );
+os_uint_t       os_queue_get_size           (os_handle_t queue );
+os_uint_t       os_queue_get_used_size      (os_handle_t queue );
+os_uint_t       os_queue_get_free_size      (os_handle_t queue );
+os_bool_t       os_queue_peek_send          (os_handle_t queue, os_uint_t size );
+os_bool_t       os_queue_send_nonblocking   (os_handle_t queue, const void *data, os_uint_t size );
+os_bool_t       os_queue_send               (os_handle_t queue, const void *data, os_uint_t size, os_uint_t timeout );
+os_bool_t       os_queue_peek_receive       (os_handle_t queue, os_uint_t size );
+os_bool_t       os_queue_receive_nonblocking(os_handle_t queue, void *data, os_uint_t size );
+os_bool_t       os_queue_receive            (os_handle_t queue, void *data, os_uint_t size, os_uint_t timeout );
 
 
 #endif /* H1CB9096F_13C2_4118_B608_F147C53BE57D */
