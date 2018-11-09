@@ -464,6 +464,12 @@ void sch_unload_current( sch_cblk_t *p_sch )
 	 */
 	if( p_sch->p_current != p_sch->p_next )
 	{
+		/*
+		 * If failed:
+		 * Invalid lock depth
+		 */
+		UTIL_ASSERT( p_sch->lock_depth > 0);
+
 		/* save lock depth locally */
 		lock_depth = p_sch->lock_depth;
 		p_sch->lock_depth = 0;
@@ -797,7 +803,7 @@ void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 	UTIL_ASSERT( p_thd->state == THD_STATE_READY );
 	UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
 	UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
-	UTIL_ASSERT( p_thd->p_schinfo = NULL);
+	UTIL_ASSERT( p_thd->p_schinfo == NULL);
 }
 
 /*
@@ -929,6 +935,12 @@ void thd_create_static(thd_cblk_t *p_thd, uint_t prio, void *p_stack,
 
 	thd_init(p_thd, prio, p_stack, stack_size, p_job, thd_return_hook_static);
 	thd_ready( p_thd, p_sch );
+
+	/* only request reschedule when current thread has loaded */
+	if( p_sch->p_current != NULL )
+	{
+		sch_reschedule_req(p_sch);
+	}
 }
 
 /*
@@ -1016,12 +1028,19 @@ void thd_return_hook_static( void )
 #include "../include/api.h"
 
 /**
- * @brief Create a thread, allocating memory automatically
+ * @brief Create a thread, allocating necessary memory automatically
  * @param prio priority of the thread
  * @param stack_size stack size
  * @param p_job pointer to a job
  * @retval 0 thread creation failed because of low memory
  * @retval !0 handle to created thread
+ * @details This function can be used to create a thread that is mortal
+ * (only runs a period of time, after which resources are released).
+ * The operating system does not implement parenting and thus the thread will
+ * not be automatically killed if the parent thread has died. This function
+ * will not trigger a reschedule. As a result, if a lower priority thread is
+ * running on the CPU, the created higher priority thread will have to wait
+ * until it yields or the next heartbeat.
  * @note This function can be used in interrupt or thread contexts.
  */
 UTIL_SAFE
@@ -1057,6 +1076,12 @@ os_handle_t os_thread_create( os_uint_t prio, os_uint_t stack_size, void (*p_job
 		{
 			thd_init( p_thd, prio, p_stack, stack_size, p_job, thd_return_hook );
 			thd_ready( p_thd, &g_sch );
+
+			/* only request reschedule when current thread has loaded */
+			if( g_sch.p_current != NULL )
+			{
+				sch_reschedule_req(&g_sch);
+			}
 		}
 	}
 
@@ -1189,8 +1214,8 @@ void os_start( void )
 
 	UTIL_UNLOCK_EVERYTHING();
 
-	/* call portable init function to start kernel */
-	OSPORT_INIT();
+	/* call portable start function to start kernel */
+	OSPORT_START();
 }
 
 /**

@@ -153,13 +153,14 @@ struct thd_cblk_s
  * Scheduler functions
  */
 UTIL_UNSAFE void sch_init( sch_cblk_t *p_sch );
-UTIL_SAFE void sch_lock_int( sch_cblk_t *p_sch );
-UTIL_SAFE void sch_unlock_int( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_reschedule_req( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_unload_current( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_handle_heartbeat( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_insert_ready( sch_cblk_t *p_sch, sch_qitem_t *p_item );
 UTIL_UNSAFE void sch_insert_delay( sch_cblk_t *p_sch, sch_qitem_t *p_item, uint_t timeout );
+
+UTIL_SAFE void sch_lock_int( sch_cblk_t *p_sch );
+UTIL_SAFE void sch_unlock_int( sch_cblk_t *p_sch );
 
 /*
  * Thread functions
