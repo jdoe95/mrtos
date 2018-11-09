@@ -789,6 +789,14 @@ void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 		sch_insert_delay( p_sch, &p_thd->item_delay, timeout );
 
 	sch_unload_current( p_sch );
+
+	/*
+	 * If failed:
+	 * Current thread should be ready after resume
+	 */
+	UTIL_ASSERT( p_thd->state == THD_STATE_READY );
+	UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
+	UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
 }
 
 /*
