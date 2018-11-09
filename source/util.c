@@ -26,6 +26,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *****************************************************************************/
 #include "../include/util.h"
+#include "../include/thread.h"
 #include "../include/global.h"
 
 /*
@@ -33,22 +34,7 @@
  */
 void util_dint_nested( void )
 {
-	uint_t int_depth;
-
-	/*
-	 * If failed:
-	 * Interrupt nested over 100 times, completely impossible.
-	 * Underflow?
-	 */
-	UTIL_ASSERT( g_int_depth < 100 );
-
-	int_depth = g_int_depth + 1;
-
-	if( int_depth == 1 )
-	{
-		OSPORT_DISABLE_INT();
-		g_int_depth = int_depth;
-	}
+	sch_lock_int(&g_sch);
 }
 
 /*
@@ -56,25 +42,6 @@ void util_dint_nested( void )
  */
 void util_eint_nested( void )
 {
-	/*
-	 * If failed:
-	 * Trying to release a lock you do not own
-	 * lock/unlock must be used in pairs
-	 */
-	UTIL_ASSERT( g_int_depth > 0 );
-
-	/*
-	 * If failed:
-	 * Interrupt nested over 100 times, completely impossible.
-	 * Underflow?
-	 */
-	UTIL_ASSERT( g_int_depth < 100 );
-
-	g_int_depth--;
-
-	if( g_int_depth == 0)
-	{
-		OSPORT_ENABLE_INT();
-	}
+	sch_unlock_int(&g_sch);
 }
 

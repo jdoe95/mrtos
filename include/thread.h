@@ -131,6 +131,7 @@ struct sch_cblk_s
 	struct sch_qprio_s q_delay1;                    /* delay queue 1           */
 	struct sch_qprio_s q_delay2;                    /* delay queue 2           */
 	volatile uint_t timestamp;                      /* current time            */
+	volatile uint_t lock_depth;						/* lock nesting counter    */
 };
 
 /*
@@ -152,8 +153,10 @@ struct thd_cblk_s
  * Scheduler functions
  */
 UTIL_UNSAFE void sch_init( sch_cblk_t *p_sch );
+UTIL_SAFE void sch_lock_int( sch_cblk_t *p_sch );
+UTIL_SAFE void sch_unlock_int( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_reschedule_req( sch_cblk_t *p_sch );
-UTIL_UNSAFE void sch_unload_current_req( sch_cblk_t *p_sch );
+UTIL_UNSAFE void sch_unload_current( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_handle_heartbeat( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_insert_ready( sch_cblk_t *p_sch, sch_qitem_t *p_item );
 UTIL_UNSAFE void sch_insert_delay( sch_cblk_t *p_sch, sch_qitem_t *p_item, uint_t timeout );
@@ -165,7 +168,7 @@ UTIL_UNSAFE void thd_init( thd_cblk_t *p_thd, uint_t prio, void *p_stack,
 		uint_t stack_size, void (*p_job)(void), void (*p_return)(void) );
 
 UTIL_UNSAFE void thd_ready(thd_cblk_t *p_thd, sch_cblk_t *p_sch);
-UTIL_UNSAFE void thd_block_current_req( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
+UTIL_UNSAFE void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 		sch_cblk_t *p_sch );
 
 UTIL_UNSAFE void thd_suspend( thd_cblk_t *p_thd, sch_cblk_t *p_sch );

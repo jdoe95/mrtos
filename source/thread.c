@@ -287,11 +287,64 @@ void sch_init( sch_cblk_t *p_sch )
 	sch_q_init( &p_sch->q_delay1);
 	sch_q_init( &p_sch->q_delay2 );
 
+	p_sch->lock_depth = 0;
 	p_sch->timestamp = 0;
 	p_sch->p_current = NULL;
 	p_sch->p_next = NULL;
 	p_sch->p_delayq_normal = &p_sch->q_delay1;
 	p_sch->p_delayq_overflow = &p_sch->q_delay2;
+}
+
+/*
+ * Lock local interrupts nested
+ */
+UTIL_SAFE
+void sch_lock_int( sch_cblk_t *p_sch )
+{
+	uint_t int_depth;
+
+	/*
+	 * If failed:
+	 * Interrupt nested over 100 times, completely impossible.
+	 * Underflow?
+	 */
+	UTIL_ASSERT( p_sch->lock_depth < 100 );
+
+	int_depth = p_sch->lock_depth + 1;
+
+	if( int_depth == 1 )
+	{
+		OSPORT_DISABLE_INT();
+		p_sch->lock_depth = int_depth;
+	}
+}
+
+/*
+ * Unlock local interrupts nested
+ */
+UTIL_SAFE
+void sch_unlock_int( sch_cblk_t *p_sch )
+{
+	/*
+	 * If failed:
+	 * Trying to release a lock you do not own
+	 * lock/unlock must be used in pairs
+	 */
+	UTIL_ASSERT( p_sch->lock_depth > 0 );
+
+	/*
+	 * If failed:
+	 * Interrupt nested over 100 times, completely impossible.
+	 * Underflow?
+	 */
+	UTIL_ASSERT( p_sch->lock_depth < 100 );
+
+	p_sch->lock_depth--;
+
+	if( p_sch->lock_depth == 0)
+	{
+		OSPORT_ENABLE_INT();
+	}
 }
 
 /*
@@ -359,12 +412,14 @@ void sch_reschedule_req( sch_cblk_t *p_sch )
 
 /*
  * Unload current thread, similar to reschedule, but doesn't
- * compare priority, always generates context switch request
+ * compare priority, if next thread is found to be different
+ * than current thread, will always unload current thread
  */
 UTIL_UNSAFE
-void sch_unload_current_req( sch_cblk_t *p_sch )
+void sch_unload_current( sch_cblk_t *p_sch )
 {
 	uint_t counter;
+	uint_t lock_depth;
 
 	/*
 	 * If failed:
@@ -401,8 +456,29 @@ void sch_unload_current_req( sch_cblk_t *p_sch )
 	p_sch->q_ready[counter].p_head =
 			p_sch->q_ready[counter].p_head->p_next;
 
+	/*
+	 * when yielding, it is possible that current thread
+	 * still gets rescheduled. When this happens, only
+	 * generate context switch when switching to a different
+	 * thread
+	 */
 	if( p_sch->p_current != p_sch->p_next )
+	{
+		/* save lock depth locally */
+		lock_depth = p_sch->lock_depth;
+		p_sch->lock_depth = 0;
+
+		/* open a natural preemption point */
+		OSPORT_ENABLE_INT();
+
 		OSPORT_CONTEXTSW_REQ();
+
+		/* close the preemption point */
+		OSPORT_DISABLE_INT();
+
+		/* restore lock depth */
+		p_sch->lock_depth = lock_depth;
+	}
 }
 
 /*
@@ -670,7 +746,7 @@ void thd_ready( thd_cblk_t *p_thd, sch_cblk_t *p_sch )
  * Block current thread to optional resource list
  */
 UTIL_UNSAFE
-void thd_block_current_req( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
+void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 		sch_cblk_t *p_sch )
 {
 	thd_cblk_t *p_thd;
@@ -712,7 +788,7 @@ void thd_block_current_req( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 	if( timeout != 0)
 		sch_insert_delay( p_sch, &p_thd->item_delay, timeout );
 
-	sch_unload_current_req( p_sch );
+	sch_unload_current( p_sch );
 }
 
 /*
@@ -745,7 +821,7 @@ void thd_suspend( thd_cblk_t *p_thd, sch_cblk_t *p_sch )
 
 		if( p_thd == p_sch->p_current )
 		{
-			sch_unload_current_req(p_sch);
+			sch_unload_current(p_sch);
 		}
 	}
 }
@@ -879,7 +955,7 @@ void thd_delete_static(thd_cblk_t *p_thd, sch_cblk_t *p_sch)
 	p_thd->p_schinfo = NULL;
 
 	if( p_thd == p_sch->p_current )
-		sch_unload_current_req(p_sch);
+		sch_unload_current(p_sch);
 }
 
 /*
@@ -1096,7 +1172,7 @@ UTIL_SAFE
 void os_thread_yield( void )
 {
 	UTIL_LOCK_EVERYTHING();
-	sch_unload_current_req(&g_sch);
+	sch_unload_current(&g_sch);
 	UTIL_UNLOCK_EVERYTHING();
 }
 
@@ -1107,16 +1183,10 @@ void os_thread_yield( void )
 UTIL_SAFE
 void os_thread_delay( os_uint_t timeout )
 {
-	/*
-	 * If failed:
-	 * Sleeping with lock held
-	 */
-	UTIL_ASSERT( g_int_depth == 0);
-
 	if( timeout != 0)
 	{
 		UTIL_LOCK_EVERYTHING();
-		thd_block_current_req(NULL, NULL, timeout, &g_sch);
+		thd_block_current(NULL, NULL, timeout, &g_sch);
 		UTIL_UNLOCK_EVERYTHING();
 	}
 }

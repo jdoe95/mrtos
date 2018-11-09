@@ -32,8 +32,6 @@
 #include "memory.h"
 #include "thread.h"
 
-extern volatile uint_t g_int_depth;
-
 extern mpool_t g_mpool;
 extern mlst_t g_mlst;
 
