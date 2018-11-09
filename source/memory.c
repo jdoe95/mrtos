@@ -128,7 +128,6 @@ void mpool_init( mpool_t *p_mpool )
 	p_mpool->p_alloc_head = NULL;
 }
 
-
 /*
  * Insert memory block into memory list
  */
@@ -586,6 +585,12 @@ void mlst_gather_info( const mlst_t *p_mlst, mlst_info_t *p_info)
 
 			p_i = p_i->p_next;
 
+			/*
+			 * If failed:
+			 * Broken link
+			 */
+			UTIL_ASSERT(p_i != NULL);
+
 		} while( p_i != p_mlst->p_head );
 	}
 
@@ -624,6 +629,13 @@ void mpool_gather_info( const mpool_t *p_mpool, mpool_info_t *p_info)
 			count++;
 
 			p_i = p_i->p_next;
+
+			/*
+			 * If failed:
+			 * Broken link
+			 */
+			UTIL_ASSERT(p_i != NULL);
+
 		} while( p_i != p_mpool->p_head );
 	}
 
