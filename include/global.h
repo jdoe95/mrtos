@@ -28,14 +28,11 @@
 #ifndef HC14F041A_9F37_4E94_B5A5_455AE133748E
 #define HC14F041A_9F37_4E94_B5A5_455AE133748E
 
-#include "util.h"
 #include "memory.h"
 #include "thread.h"
 
 extern mpool_t g_mpool;
 extern mlst_t g_mlst;
-
 extern sch_cblk_t g_sch;
-extern thd_cblk_t g_thd_idle;
 
 #endif /* HC14F041A_9F37_4E94_B5A5_455AE133748E */

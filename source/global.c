@@ -29,11 +29,6 @@
 #include "../include/api.h"
 
 /*
- * Interrupt disable nesting counter
- */
-volatile uint_t g_int_depth;
-
-/*
  * Global memory pool
  */
 mpool_t g_mpool;
@@ -51,8 +46,19 @@ sch_cblk_t g_sch;
 /*
  * Idle thread control block
  */
-thd_cblk_t g_thd_idle;
-byte_t thd_idle_stack[OSPORT_IDLE_STACK_SIZE];
+static thd_cblk_t g_thd_idle;
+static byte_t thd_idle_stack[OSPORT_IDLE_STACK_SIZE];
+
+/**
+ * @brief Handle heartbeat
+ */
+UTIL_SAFE
+void os_handle_heartbeat( void )
+{
+	UTIL_LOCK_EVERYTHING();
+	sch_handle_heartbeat( &g_sch );
+	UTIL_UNLOCK_EVERYTHING();
+}
 
 /**
  * @brief Initializes the operating system
@@ -61,7 +67,6 @@ byte_t thd_idle_stack[OSPORT_IDLE_STACK_SIZE];
 UTIL_UNSAFE
 void os_init( const os_config_t *p_config )
 {
-	mblk_t *p_mblk;
 	/*
 	 * If failed:
 	 * Invalid parameter
@@ -69,15 +74,13 @@ void os_init( const os_config_t *p_config )
 	UTIL_ASSERT(p_config != NULL);
 
 	/* initialize global variables */
-	g_int_depth = 0;
 	mpool_init(&g_mpool);
 	mlst_init(&g_mlst);
 	sch_init(&g_sch);
 
 	/* create pool memory */
-	p_mblk = (mblk_t*)(p_config->p_pool_mem);
-	mblk_init( p_mblk, p_config->pool_size );
-	mpool_insert( p_mblk, &g_mpool);
+	mblk_init( (mblk_t*)p_config->p_pool_mem, p_config->pool_size );
+	mpool_insert( (mblk_t*)p_config->p_pool_mem, &g_mpool);
 
 	/* initialize idle thread */
 	thd_init( &g_thd_idle, (OSPORT_NUM_PRIOS-1), thd_idle_stack,
