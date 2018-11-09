@@ -45,11 +45,11 @@
 #endif
 
 #if !defined(OSPORT_IDLE_FUNC) || \
-	!defined(OSPORT_INIT) || \
 	!defined(OSPORT_INIT_STACK) || \
 	!defined(OSPORT_DISABLE_INT) || \
 	!defined(OSPORT_ENABLE_INT) || \
-	!defined(OSPORT_CONTEXTSW_REQ)
+	!defined(OSPORT_CONTEXTSW_REQ) || \
+	!defined(OSPORT_START)
 #	error "One or more functions missing."
 #endif
 
