@@ -54,17 +54,6 @@ sch_cblk_t g_sch;
 thd_cblk_t g_thd_idle;
 byte_t thd_idle_stack[OSPORT_IDLE_STACK_SIZE];
 
-/*
- * handle heartbeat
- */
-UTIL_SAFE
-void g_handle_heartbeat( void )
-{
-	UTIL_LOCK_EVERYTHING();
-	sch_handle_heartbeat(&g_sch);
-	UTIL_UNLOCK_EVERYTHING();
-}
-
 /**
  * @brief Initializes the operating system
  * @note This function must be called with preemption disabled
