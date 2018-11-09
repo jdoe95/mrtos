@@ -830,6 +830,14 @@ void thd_suspend( thd_cblk_t *p_thd, sch_cblk_t *p_sch )
 		if( p_thd == p_sch->p_current )
 		{
 			sch_unload_current(p_sch);
+
+			/*
+			 * If failed:
+			 * Current thread should be ready after resume
+			 */
+			UTIL_ASSERT( p_thd->state == THD_STATE_READY );
+			UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
+			UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
 		}
 	}
 }
@@ -963,7 +971,16 @@ void thd_delete_static(thd_cblk_t *p_thd, sch_cblk_t *p_sch)
 	p_thd->p_schinfo = NULL;
 
 	if( p_thd == p_sch->p_current )
+	{
 		sch_unload_current(p_sch);
+		/*
+		 * If failed:
+		 * Current thread should be ready after resume
+		 */
+		UTIL_ASSERT( p_thd->state == THD_STATE_READY );
+		UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
+		UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
+	}
 }
 
 /*
@@ -1181,6 +1198,14 @@ void os_thread_yield( void )
 {
 	UTIL_LOCK_EVERYTHING();
 	sch_unload_current(&g_sch);
+	/*
+	 * If failed:
+	 * Current thread should be ready after resume
+	 */
+	UTIL_ASSERT( g_sch.p_current->state == THD_STATE_READY );
+	UTIL_ASSERT( g_sch.p_current->item_sch.p_q != NULL );
+	UTIL_ASSERT( g_sch.p_current->item_delay.p_q == NULL );
+
 	UTIL_UNLOCK_EVERYTHING();
 }
 
