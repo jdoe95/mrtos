@@ -173,9 +173,6 @@ UTIL_UNSAFE void thd_ready(thd_cblk_t *p_thd, sch_cblk_t *p_sch);
 UTIL_UNSAFE void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 		sch_cblk_t *p_sch );
 
-UTIL_UNSAFE void thd_suspend( thd_cblk_t *p_thd, sch_cblk_t *p_sch );
-UTIL_UNSAFE void thd_change_prio( thd_cblk_t *p_thd, uint_t prio, sch_cblk_t *p_sch );
-
 /*
  * Internal thread creation and deletion
  */

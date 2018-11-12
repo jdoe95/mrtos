@@ -779,116 +779,6 @@ void thd_block_current( sch_qprio_t *p_to, void *p_schinfo, uint_t timeout,
 }
 
 /*
- * Stop a thread
- */
-UTIL_UNSAFE
-void thd_suspend( thd_cblk_t *p_thd, sch_cblk_t *p_sch )
-{
-	/*
-	 * If failed:
-	 * NULL pointer passed to p_thd or p_sch
-	 */
-	UTIL_ASSERT( p_thd != NULL );
-	UTIL_ASSERT( p_sch != NULL );
-
-	if( p_thd->state != THD_STATE_SUSPENDED )
-	{
-		p_thd->state = THD_STATE_SUSPENDED;
-
-		/* remove scheduling item */
-		if( p_thd->item_sch.p_q != NULL )
-			sch_qitem_remove( &p_thd->item_sch );
-
-		/* remove delay item */
-		if( p_thd->item_delay.p_q != NULL )
-			sch_qitem_remove( &p_thd->item_delay );
-
-		/* remove scheduling info */
-		p_thd->p_schinfo = NULL;
-
-		if( p_thd == p_sch->p_current )
-		{
-			sch_unload_current(p_sch);
-
-			/*
-			 * If failed:
-			 * Current thread should be ready after resume
-			 */
-			UTIL_ASSERT( p_thd->state == THD_STATE_READY );
-			UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
-			UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
-			UTIL_ASSERT( p_thd->p_schinfo == NULL );
-		}
-	}
-}
-
-/*
- * Change thread priority
- */
-UTIL_UNSAFE
-void thd_change_prio( thd_cblk_t *p_thd, uint_t prio, sch_cblk_t *p_sch )
-{
-	sch_qprio_t *p_qprio;
-
-	/*
-	 * If failed:
-	 * Invalid parameter
-	 */
-	UTIL_ASSERT( p_sch != NULL );
-	UTIL_ASSERT( p_thd != NULL );
-	UTIL_ASSERT( prio < OSPORT_NUM_PRIOS);
-
-	switch( p_thd->state )
-	{
-	case THD_STATE_DELETED:
-	case THD_STATE_SUSPENDED:
-		/*
-		 * If failed:
-		 * Scheduling item queued when shouldn't be
-		 */
-		UTIL_ASSERT( p_thd->item_sch.p_q == NULL );
-
-		p_thd->item_sch.tag = prio;
-
-		break;
-
-	case THD_STATE_READY:
-
-		if( p_thd->item_sch.p_q != NULL )
-		{
-			sch_qitem_remove( &p_thd->item_sch );
-			sch_qitem_enq_fifo( &p_thd->item_sch, &p_sch->q_ready[prio]);
-		}
-
-		p_thd->item_sch.tag = prio;
-
-		break;
-
-	case THD_STATE_BLOCKED:
-
-		p_qprio = p_thd->item_sch.p_q;
-
-		if( p_qprio != NULL )
-			sch_qitem_remove( &p_thd->item_sch );
-
-		p_thd->item_sch.tag = prio;
-
-		if(p_qprio != NULL )
-			sch_qitem_enq_prio( &p_thd->item_sch, p_qprio);
-
-		break;
-
-	default:
-		/*
-		 * If failed:
-		 * Invalid state
-		 */
-		UTIL_ASSERT(0);
-		break;
-	}
-}
-
-/*
  * Create a thread using static memory
  */
 UTIL_UNSAFE
@@ -1243,7 +1133,35 @@ void os_thread_suspend( os_handle_t h_thread )
 	else
 		p_thd = (thd_cblk_t*)h_thread;
 
-	thd_suspend(p_thd, &g_sch);
+	if( p_thd->state != THD_STATE_SUSPENDED )
+	{
+		p_thd->state = THD_STATE_SUSPENDED;
+
+		/* remove scheduling item */
+		if( p_thd->item_sch.p_q != NULL )
+			sch_qitem_remove( &p_thd->item_sch );
+
+		/* remove delay item */
+		if( p_thd->item_delay.p_q != NULL )
+			sch_qitem_remove( &p_thd->item_delay );
+
+		/* remove scheduling info */
+		p_thd->p_schinfo = NULL;
+
+		if( p_thd == g_sch.p_current )
+		{
+			sch_unload_current(&g_sch);
+
+			/*
+			 * If failed:
+			 * Current thread should be ready after resume
+			 */
+			UTIL_ASSERT( p_thd->state == THD_STATE_READY );
+			UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
+			UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
+			UTIL_ASSERT( p_thd->p_schinfo == NULL );
+		}
+	}
 
 	UTIL_UNLOCK_EVERYTHING();
 }
@@ -1280,6 +1198,13 @@ void os_thread_resume( os_handle_t h_thread )
 void os_thread_set_priority( os_handle_t h_thread, os_uint_t prio )
 {
 	thd_cblk_t *p_thd;
+	sch_qprio_t *p_qprio;
+
+	/*
+	 * If failed:
+	 * Invalid prio
+	 */
+	UTIL_ASSERT( prio < OSPORT_NUM_PRIOS);
 
 	UTIL_LOCK_EVERYTHING();
 
@@ -1288,7 +1213,55 @@ void os_thread_set_priority( os_handle_t h_thread, os_uint_t prio )
 	else
 		p_thd = (thd_cblk_t*)h_thread;
 
-	thd_change_prio(p_thd, prio, &g_sch);
+	switch( p_thd->state )
+	{
+	case THD_STATE_DELETED:
+	case THD_STATE_SUSPENDED:
+		/*
+		 * If failed:
+		 * Scheduling item queued when shouldn't be
+		 */
+		UTIL_ASSERT( p_thd->item_sch.p_q == NULL );
+
+		p_thd->item_sch.tag = prio;
+
+		break;
+
+	case THD_STATE_READY:
+
+		if( p_thd->item_sch.p_q != NULL )
+		{
+			sch_qitem_remove( &p_thd->item_sch );
+			sch_qitem_enq_fifo( &p_thd->item_sch, &g_sch.q_ready[prio]);
+		}
+
+		p_thd->item_sch.tag = prio;
+
+		break;
+
+	case THD_STATE_BLOCKED:
+
+		p_qprio = p_thd->item_sch.p_q;
+
+		if( p_qprio != NULL )
+			sch_qitem_remove( &p_thd->item_sch );
+
+		p_thd->item_sch.tag = prio;
+
+		if(p_qprio != NULL )
+			sch_qitem_enq_prio( &p_thd->item_sch, p_qprio);
+
+		break;
+
+	default:
+		/*
+		 * If failed:
+		 * Invalid state
+		 */
+		UTIL_ASSERT(0);
+		break;
+	}
+
 	UTIL_UNLOCK_EVERYTHING();
 }
 
