@@ -5,11 +5,6 @@
  *
  * This file is part of mRTOS.
  *
- * This implementation incorporates the fixed priority preemptive scheduling
- * algorithm with round-robin scheduling. A higher priority always preempts
- * a lower priority thread, while threads of the same priority share the
- * CPU time.
- *
  * Copyright (C) 2018 John Buyi Yu
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -50,33 +45,33 @@ typedef struct mutex_schinfo_s mutex_schinfo_t;
  */
 struct mutex_cblk_s
 {
-	/*
-	 * lock_depth == 0 (&& p_owner == NULL) not locked
-	 * p_owner != NULL, lock_depth > 0: owned by thread
-	 *
-	 * can lock = (lock_depth == 0)
-	 * can lock recursive = (lock_depth == 0) || (p_owner == current)
-	 *
-	 */
-	volatile uint_t lock_depth; /* lock depth */
-	struct thd_cblk_s *volatile p_owner; /* owner thread */
-	struct sch_qprio_s q_wait; /* waiting threads */
+	volatile uint_t lock_depth;          /* lock depth      */
+	struct thd_cblk_s *volatile p_owner; /* owner thread    */
+	struct sch_qprio_s q_wait;           /* waiting threads */
 };
+
+/*
+ * Mutex wait flag
+ */
+typedef enum
+{
+	MUTEX_PEEK = (1<<0)
+} mutex_wait_flag_t;
 
 /*
  * Mutex scheduling info
  */
 struct mutex_schinfo_s
 {
-	volatile bool_t result; /* wait result */
+	volatile bool_t result;    /* wait result */
+	volatile uint_t wait_flag; /* wait flag   */
 };
 
 /*
  * Initialization functions
  */
 UTIL_UNSAFE void mutex_init( mutex_cblk_t *p_mutex );
-UTIL_UNSAFE void mutex_schinfo_init( mutex_schinfo_t *p_schinfo );
-
+UTIL_UNSAFE void mutex_schinfo_init( mutex_schinfo_t *p_schinfo, uint_t wait_flag );
 UTIL_UNSAFE void mutex_delete_static( mutex_cblk_t *p_mutex, sch_cblk_t *p_sch );
 
 #endif /* H19FA4BCD_7A56_4B7D_A67A_063B3FFE82A9 */

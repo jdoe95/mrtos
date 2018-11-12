@@ -5,11 +5,6 @@
  *
  * This file is part of mRTOS.
  *
- * This implementation incorporates the fixed priority preemptive scheduling
- * algorithm with round-robin scheduling. A higher priority always preempts
- * a lower priority thread, while threads of the same priority share the
- * CPU time.
- *
  * Copyright (C) 2018 John Buyi Yu
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -33,6 +28,7 @@
 #include "../include/mutex.h"
 #include "../include/thread.h"
 #include "../include/global.h"
+#include "../include/api.h"
 
 /*
  * Initialize a mutex
@@ -55,7 +51,7 @@ void mutex_init( mutex_cblk_t *p_mutex )
  * Initialize mutex scheduling info
  */
 UTIL_UNSAFE
-void mutex_schinfo_init( mutex_schinfo_t *p_schinfo )
+void mutex_schinfo_init( mutex_schinfo_t *p_schinfo, uint_t wait_flag )
 {
 	/*
 	 * If failed:
@@ -64,6 +60,7 @@ void mutex_schinfo_init( mutex_schinfo_t *p_schinfo )
 	UTIL_ASSERT( p_schinfo != NULL );
 
 	p_schinfo->result = false;
+	p_schinfo->wait_flag = wait_flag;
 }
 
 /*
@@ -95,11 +92,15 @@ void mutex_delete_static( mutex_cblk_t *p_mutex, sch_cblk_t *p_sch )
 		thd_ready( p_item->p_thd, p_sch );
 	}
 
-	sch_reschedule_req(&g_sch);
+	sch_reschedule_req(p_sch);
 }
 
 /**
  * @brief Creates a mutex
+ * @retval !0 handle to the created mutex
+ * @retval 0 creation failed because of low memory
+ * @note This function is thread safe and can be used in an interrupt
+ * context or a thread context.
  */
 UTIL_SAFE
 os_handle_t os_mutex_create( void )
@@ -121,7 +122,13 @@ os_handle_t os_mutex_create( void )
 
 /**
  * @brief Deletes a mutex
+ * @param h_mutex handle to a mutex
+ * @details Sleeping threads will be readied and the wait will
+ * fail.
+ * @note This function is thread safe and can be used in an interrupt
+ * or a thread context.
  */
+UTIL_SAFE
 void os_mutex_delete( os_handle_t h_mutex )
 {
 	mutex_cblk_t *p_mutex;
@@ -142,73 +149,16 @@ void os_mutex_delete( os_handle_t h_mutex )
 	UTIL_UNLOCK_EVERYTHING();
 }
 
-os_bool_t os_mutex_peek_lock(os_handle_t h_mutex)
-{
-	mutex_cblk_t *p_mutex;
-	bool_t ret;
-
-	p_mutex = (mutex_cblk_t*)h_mutex;
-
-	/*
-	 * If failed:
-	 * NULL pointer passed to p_mutex
-	 */
-	UTIL_ASSERT( p_mutex != NULL );
-
-	UTIL_LOCK_EVERYTHING();
-	ret = (p_mutex->p_owner == g_sch.p_current) || (p_mutex->lock_depth == 0);
-	UTIL_UNLOCK_EVERYTHING();
-
-	return ret;
-}
-
-os_bool_t os_mutex_is_locked(os_handle_t h_mutex)
-{
-	mutex_cblk_t *p_mutex;
-	bool_t ret;
-
-	p_mutex = (mutex_cblk_t*)h_mutex;
-
-	/*
-	 * If failed:
-	 * NULL pointer passed to p_mutex
-	 */
-	UTIL_ASSERT( p_mutex != NULL );
-	UTIL_LOCK_EVERYTHING();
-	ret = p_mutex->lock_depth > 0;
-	UTIL_UNLOCK_EVERYTHING();
-
-	return ret;
-}
-
-os_bool_t os_mutex_lock_nonblocking(os_handle_t h_mutex)
-{
-	mutex_cblk_t *p_mutex;
-	bool_t ret = false;
-
-	p_mutex = (mutex_cblk_t*)h_mutex;
-
-	/*
-	 * If failed:
-	 * NULL pointer passed to p_mutex
-	 */
-	UTIL_ASSERT( p_mutex != NULL );
-	UTIL_LOCK_EVERYTHING();
-
-	if( (p_mutex->lock_depth == 0) ||
-			(p_mutex->p_owner == g_sch.p_current ) )
-	{
-		p_mutex->p_owner = g_sch.p_current;
-		p_mutex->lock_depth++;
-
-		ret = true;
-	}
-
-	UTIL_UNLOCK_EVERYTHING();
-
-	return ret;
-}
-
+/**
+ * @brief Locks a mutex, sleep if necessary
+ * @param h_mutex handle to a mutex
+ * @param timeout sleep timeout
+ * @retval true operation successful
+ * @retval false timeout
+ * @note This function is thread safe and can only be used in a
+ * thread context
+ */
+UTIL_SAFE
 os_bool_t os_mutex_lock(os_handle_t h_mutex, os_uint_t timeout)
 {
 	bool_t ret;
@@ -234,18 +184,30 @@ os_bool_t os_mutex_lock(os_handle_t h_mutex, os_uint_t timeout)
 	}
 	else
 	{
-		mutex_schinfo_init(&schinfo);
+		mutex_schinfo_init(&schinfo, 0);
 		thd_block_current( &p_mutex->q_wait, &schinfo, timeout, &g_sch);
 		ret = schinfo.result;
 	}
+	UTIL_UNLOCK_EVERYTHING();
 
 	return ret;
 }
 
+/**
+ * @brief Unlocks a mutex
+ * @param h_mutex handle to a mutex
+ * @details Only unlocks the mutex when current thread owns
+ * the mutex
+ * @note This function is thread safe and can only be used in
+ * a thread context.
+ */
+UTIL_SAFE
 void os_mutex_unlock(os_handle_t h_mutex)
 {
 	mutex_cblk_t *p_mutex;
 	thd_cblk_t *p_thd;
+	mutex_schinfo_t *p_schinfo;
+
 	p_mutex = (mutex_cblk_t*)h_mutex;
 
 	/*
@@ -260,45 +222,197 @@ void os_mutex_unlock(os_handle_t h_mutex)
 	if( p_mutex->p_owner == g_sch.p_current )
 	{
 		if( p_mutex->lock_depth > 1 )
-		{
 			p_mutex->lock_depth--;
-		}
+
 		else if( p_mutex->lock_depth == 1)
 		{
 			/* ready waiting threads */
-			if( p_mutex->q_wait.p_head != NULL )
+			for( ; ; )
 			{
-				/*
-				 * If failed:
-				 * cannot obtain thread
-				 */
-				UTIL_ASSERT( p_mutex->q_wait.p_head->p_thd != NULL );
+				if( p_mutex->q_wait.p_head != NULL )
+				{
+					/*
+					 * If failed:
+					 * cannot obtain thread
+					 */
+					UTIL_ASSERT( p_mutex->q_wait.p_head->p_thd != NULL );
+					p_thd = p_mutex->q_wait.p_head->p_thd;
 
-				p_thd = p_mutex->q_wait.p_head->p_thd;
+					/*
+					 * If failed:
+					 * Cannot obtain schinfo
+					 */
+					UTIL_ASSERT( p_thd->p_schinfo != NULL );
+					p_schinfo = p_thd->p_schinfo;
 
-				p_mutex->p_owner = p_thd;
-				((mutex_schinfo_t*)(p_thd->p_schinfo))->result = true;
+					p_schinfo->result = true;
+					thd_ready(p_thd, &g_sch);
+					sch_reschedule_req( &g_sch );
 
-				thd_ready(p_thd, &g_sch);
-				sch_reschedule_req( &g_sch );
-
-			}
-			else
-			{
-				/* unlock mutex */
-				p_mutex->lock_depth = 0;
-				p_mutex->p_owner = NULL;
+					if( p_schinfo->wait_flag & MUTEX_PEEK )
+					{
+						/* peeking thread, do nothing */
+						continue;
+					}
+					else
+					{
+						p_mutex->p_owner = p_thd;
+						break;
+					}
+				}
+				else
+				{
+					/* unlock mutex */
+					p_mutex->lock_depth = 0;
+					p_mutex->p_owner = NULL;
+					break;
+				}
 			}
 		}
 		else
 		{
-			/* do nothing */
+			/* already unlocked, do nothing */
 		}
 	}
 	UTIL_UNLOCK_EVERYTHING();
 }
 
+/**
+ * @brief Try locking a mutex, sleep if necessary
+ * @param h_mutex handle to a mutex
+ * @param timeout sleep timeout
+ * @retval true operation successful
+ * @retval false timeout
+ * @brief Similar to @ref os_mutex_lock, but does not lock mutex.
+ * @note This function is thread safe and can only be used in a
+ * thread context
+ */
+UTIL_SAFE
+os_bool_t os_mutex_peek(os_handle_t h_mutex, os_uint_t timeout)
+{
+	bool_t ret;
+	mutex_schinfo_t schinfo;
+	mutex_cblk_t *p_mutex;
 
+	p_mutex = (mutex_cblk_t*)h_mutex;
 
+	/*
+	 * If failed:
+	 * NULL pointer passed to p_mutex
+	 */
+	UTIL_ASSERT( p_mutex != NULL );
+	UTIL_LOCK_EVERYTHING();
 
+	if( (p_mutex->lock_depth == 0) ||
+			(p_mutex->p_owner == g_sch.p_current ) )
+	{
+		ret = true;
+	}
+	else
+	{
+		mutex_schinfo_init(&schinfo, MUTEX_PEEK);
+		thd_block_current( &p_mutex->q_wait, &schinfo, timeout, &g_sch);
+		ret = schinfo.result;
+	}
+	UTIL_UNLOCK_EVERYTHING();
+
+	return ret;
+}
+
+/**
+ * @brief Try locking a mutex, non-blocking
+ * @param h_mutex handle to a mutex
+ * @retval true operation successful
+ * @retval false operation failed
+ * @note This function is thread safe and can only be used in a thread
+ * context.
+ */
+UTIL_SAFE
+os_bool_t os_mutex_peek_nb(os_handle_t h_mutex)
+{
+	bool_t ret = false;
+	mutex_cblk_t *p_mutex;
+
+	p_mutex = (mutex_cblk_t*)h_mutex;
+
+	/*
+	 * If failed:
+	 * NULL pointer passed to p_mutex
+	 */
+	UTIL_ASSERT( p_mutex != NULL );
+	UTIL_LOCK_EVERYTHING();
+
+	if( (p_mutex->lock_depth == 0) ||
+			(p_mutex->p_owner == g_sch.p_current ) )
+	{
+		ret = true;
+	}
+	UTIL_UNLOCK_EVERYTHING();
+
+	return ret;
+}
+
+/**
+ * @brief Checks if the mutex is locked
+ * @param h_mutex handle to a mutex
+ * @retval true mutex is locked
+ * @retval false mutex is not locked
+ * @note This function is thread safe and can be used in an
+ * interrupt or a thread context.
+ */
+UTIL_SAFE
+os_bool_t os_mutex_is_locked(os_handle_t h_mutex)
+{
+	mutex_cblk_t *p_mutex;
+	bool_t ret;
+
+	p_mutex = (mutex_cblk_t*)h_mutex;
+
+	/*
+	 * If failed:
+	 * NULL pointer passed to p_mutex
+	 */
+	UTIL_ASSERT( p_mutex != NULL );
+	UTIL_LOCK_EVERYTHING();
+	ret = p_mutex->lock_depth > 0;
+	UTIL_UNLOCK_EVERYTHING();
+
+	return ret;
+}
+
+/**
+ * @brief Locks a mutex, non-blocking
+ * @param h_mutex handle to a mutex
+ * @retval true operation successful
+ * @retval false operation failed
+ * @note This function is thread safe and can only
+ * be used in a thread context.
+ */
+UTIL_SAFE
+os_bool_t os_mutex_lock_nb(os_handle_t h_mutex)
+{
+	bool_t ret = false;
+	mutex_cblk_t *p_mutex;
+
+	p_mutex = (mutex_cblk_t*)h_mutex;
+
+	/*
+	 * If failed:
+	 * NULL pointer passed to p_mutex
+	 */
+	UTIL_ASSERT( p_mutex != NULL );
+	UTIL_LOCK_EVERYTHING();
+
+	if( (p_mutex->lock_depth == 0) ||
+			(p_mutex->p_owner == g_sch.p_current ) )
+	{
+		p_mutex->p_owner = g_sch.p_current;
+		p_mutex->lock_depth++;
+
+		ret = true;
+	}
+	UTIL_UNLOCK_EVERYTHING();
+
+	return ret;
+}
 
