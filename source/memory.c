@@ -727,9 +727,8 @@ void os_memory_get_block_info( void *p, os_memory_block_info_t *p_info )
 
 	UTIL_LOCK_EVERYTHING();
 	mblk_gather_info( p_mblk, &info );
-	UTIL_UNLOCK_EVERYTHING();
-
 	p_info->block_size = info.size;
+	UTIL_UNLOCK_EVERYTHING();
 }
 
 /**
@@ -749,10 +748,9 @@ void os_memory_get_pool_info( os_memory_pool_info_t *p_info )
 
 	UTIL_LOCK_EVERYTHING();
 	mpool_gather_info( &g_mpool, &info );
-	UTIL_UNLOCK_EVERYTHING();
-
 	p_info->num_blocks = info.count;
 	p_info->pool_size = info.size;
+	UTIL_UNLOCK_EVERYTHING();
 }
 
 /**
@@ -779,9 +777,8 @@ void os_memory_get_thread_info( os_handle_t h_thread, os_memory_thread_info_t *p
 
 	UTIL_LOCK_EVERYTHING();
 	mlst_gather_info( &p_thd->mlst, &info );
-	UTIL_UNLOCK_EVERYTHING();
-
 	p_info->num_blocks = info.count;
 	p_info->thread_size = info.size;
+	UTIL_UNLOCK_EVERYTHING();
 }
 
