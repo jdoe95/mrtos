@@ -153,6 +153,7 @@ struct thd_cblk_s
  * Scheduler functions
  */
 UTIL_UNSAFE void sch_init( sch_cblk_t *p_sch );
+UTIL_UNSAFE void sch_set_next_thread( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_reschedule_req( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_unload_current( sch_cblk_t *p_sch );
 UTIL_UNSAFE void sch_handle_heartbeat( sch_cblk_t *p_sch );

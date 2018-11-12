@@ -296,6 +296,50 @@ void sch_init( sch_cblk_t *p_sch )
 }
 
 /*
+ * Unconditionally sets the next thread
+ */
+UTIL_UNSAFE
+void sch_set_next_thread( sch_cblk_t *p_sch )
+{
+	uint_t counter;
+
+	/*
+	 * If failed:
+	 * NULL pointer passed to p_sch
+	 */
+	UTIL_ASSERT( p_sch != NULL );
+
+	for( counter = 0; counter < OSPORT_NUM_PRIOS; counter++ )
+	{
+		if( p_sch->q_ready[counter].p_head != NULL )
+			break;
+	}
+
+	/*
+	 * If failed:
+	 * Idle thread missing
+	 */
+	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
+
+	/*
+	 * If failed:
+	 * Cannot obtain thread from item
+	 */
+	UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_thd != NULL );
+
+	p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
+
+	/*
+	 * If failed:
+	 * Broken link
+	 */
+	UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_next != NULL);
+
+	p_sch->q_ready[counter].p_head =
+			p_sch->q_ready[counter].p_head->p_next;
+}
+
+/*
  * Lock local interrupts nested
  */
 UTIL_SAFE
@@ -348,8 +392,9 @@ void sch_unlock_int( sch_cblk_t *p_sch )
 }
 
 /*
- * Reschedule threads, request context switch if
- * needed
+ * Reschedule threads, only sets next thread if has
+ * a higher priority than current thread, will request
+ * context switch if needed
  */
 UTIL_UNSAFE
 void sch_reschedule_req( sch_cblk_t *p_sch )
@@ -412,13 +457,11 @@ void sch_reschedule_req( sch_cblk_t *p_sch )
 
 /*
  * Unload current thread, similar to reschedule, but doesn't
- * compare priority, if next thread is found to be different
- * than current thread, will always unload current thread
+ * compare priority, instead, switches to a different thread
  */
 UTIL_UNSAFE
 void sch_unload_current( sch_cblk_t *p_sch )
 {
-	uint_t counter;
 	uint_t lock_depth;
 
 	/*
@@ -427,34 +470,7 @@ void sch_unload_current( sch_cblk_t *p_sch )
 	 */
 	UTIL_ASSERT( p_sch != NULL );
 
-	for( counter = 0; counter < OSPORT_NUM_PRIOS; counter++ )
-	{
-		if( p_sch->q_ready[counter].p_head != NULL )
-			break;
-	}
-
-	/*
-	 * If failed:
-	 * Idle thread missing
-	 */
-	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
-
-	/*
-	 * If failed:
-	 * Cannot obtain thread from item
-	 */
-	UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_thd != NULL );
-
-	p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
-
-	/*
-	 * If failed:
-	 * Broken link
-	 */
-	UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_next != NULL);
-
-	p_sch->q_ready[counter].p_head =
-			p_sch->q_ready[counter].p_head->p_next;
+	sch_set_next_thread(p_sch);
 
 	/*
 	 * when yielding, it is possible that current thread
@@ -497,7 +513,6 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 	uint_t timestamp;
 	sch_qitem_t *p_item;
 	thd_cblk_t *p_thd;
-	uint_t counter;
 
 	/*
 	 * If failed:
@@ -553,53 +568,10 @@ void sch_handle_heartbeat( sch_cblk_t *p_sch )
 			break;
 	}
 
-	/* reschedule new priority */
-	for( counter = 0; counter < OSPORT_NUM_PRIOS; counter++ )
-	{
-		if( p_sch->q_ready[counter].p_head != NULL )
-			break;
-	}
+	sch_set_next_thread( p_sch );
 
-	/*
-	 * If failed:
-	 * Idle thread missing
-	 */
-	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
-
-	/*
-	 * If failed:
-	 * Invalid current thread
-	 */
-	UTIL_ASSERT( p_sch->p_current != NULL );
-
-	/*
-	 * If failed:
-	 * Invalid current thread priority
-	 */
-	UTIL_ASSERT( p_sch->p_current->item_sch.tag < OSPORT_NUM_PRIOS );
-
-	if( counter <= p_sch->p_current->item_sch.tag )
-	{
-		/*
-		 * If failed:
-		 * Cannot obtain thread from item
-		 */
-		UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_thd != NULL );
-
-		p_sch->p_next = p_sch->q_ready[counter].p_head->p_thd;
-
-		/*
-		 * If failed:
-		 * Corrupted queue
-		 */
-		UTIL_ASSERT( p_sch->q_ready[counter].p_head->p_next != NULL);
-
-		p_sch->q_ready[counter].p_head =
-				p_sch->q_ready[counter].p_head->p_next;
-
-		if( p_sch->p_current != p_sch->p_next )
-			OSPORT_CONTEXTSW_REQ();
-	}
+	if( p_sch->p_current != p_sch->p_next )
+		OSPORT_CONTEXTSW_REQ();
 }
 
 /*
@@ -936,7 +908,7 @@ void thd_create_static(thd_cblk_t *p_thd, uint_t prio, void *p_stack,
 	thd_init(p_thd, prio, p_stack, stack_size, p_job, thd_return_hook_static);
 	thd_ready( p_thd, p_sch );
 
-	/* only request reschedule when current thread has loaded */
+	/* only request reschedule when current thread was loaded */
 	if( p_sch->p_current != NULL )
 	{
 		sch_reschedule_req(p_sch);
@@ -987,14 +959,6 @@ void thd_delete_static(thd_cblk_t *p_thd, sch_cblk_t *p_sch)
 	if( p_thd == p_sch->p_current )
 	{
 		sch_unload_current(p_sch);
-		/*
-		 * If failed:
-		 * Current thread should be ready after resume
-		 */
-		UTIL_ASSERT( p_thd->state == THD_STATE_READY );
-		UTIL_ASSERT( p_thd->item_sch.p_q != NULL );
-		UTIL_ASSERT( p_thd->item_delay.p_q == NULL );
-		UTIL_ASSERT( p_thd->p_schinfo == NULL );
 	}
 }
 
@@ -1023,6 +987,12 @@ void thd_return_hook_static( void )
 	 * function exits
 	 */
 	UTIL_UNLOCK_EVERYTHING();
+
+	/*
+	 * If failed:
+	 * Should never come back here
+	 */
+	UTIL_ASSERT(0);
 }
 
 #include "../include/api.h"
@@ -1037,10 +1007,8 @@ void thd_return_hook_static( void )
  * @details This function can be used to create a thread that is mortal
  * (only runs a period of time, after which resources are released).
  * The operating system does not implement parenting and thus the thread will
- * not be automatically killed if the parent thread has died. This function
- * will not trigger a reschedule. As a result, if a lower priority thread is
- * running on the CPU, the created higher priority thread will have to wait
- * until it yields or the next heartbeat.
+ * not be automatically killed if the parent thread has died. Will trigger
+ * reschedule immediately if the created thread has a higher priority.
  * @note This function can be used in interrupt or thread contexts.
  */
 UTIL_SAFE
@@ -1077,7 +1045,7 @@ os_handle_t os_thread_create( os_uint_t prio, os_uint_t stack_size, void (*p_job
 			thd_init( p_thd, prio, p_stack, stack_size, p_job, thd_return_hook );
 			thd_ready( p_thd, &g_sch );
 
-			/* only request reschedule when current thread has loaded */
+			/* only request reschedule when current thread was loaded */
 			if( g_sch.p_current != NULL )
 			{
 				sch_reschedule_req(&g_sch);
@@ -1137,85 +1105,12 @@ void thd_return_hook( void )
 {
 	/* delete myself */
 	os_thread_delete(0);
-}
-
-/**
- * @brief Enters an exclusive critical section
- * @note This function can be used in a thread or
- * interrupt context
- */
-UTIL_SAFE
-void os_enter_critical( void )
-{
-	UTIL_LOCK_EVERYTHING();
-}
-
-/**
- * @brief Exits an exclusive critical section
- * @note This function can be used in a thread or
- * interrupt context.
- */
-UTIL_SAFE
-void os_exit_critical( void )
-{
-	UTIL_UNLOCK_EVERYTHING();
-}
-
-/**
- * @brief Returns current OS time in ticks
- * @note This function can be used in a thread or
- * interrupt context.
- */
-UTIL_SAFE
-os_uint_t os_get_heartbeat_counter( void )
-{
-	os_uint_t ret;
-
-	UTIL_LOCK_EVERYTHING();
-	ret = g_sch.timestamp;
-	UTIL_UNLOCK_EVERYTHING();
-
-	return ret;
-}
-
-/**
- * @brief Start the kernel
- */
-UTIL_SAFE
-void os_start( void )
-{
-	uint_t counter;
-
-	UTIL_LOCK_EVERYTHING();
-
-	for( counter = 0; counter < OSPORT_NUM_PRIOS; counter++ )
-	{
-		if( g_sch.q_ready[counter].p_head != NULL )
-			break;
-	}
 
 	/*
 	 * If failed:
-	 * Idle thread missing
+	 * Should not come back here
 	 */
-	UTIL_ASSERT( counter < OSPORT_NUM_PRIOS );
-
-	g_sch.p_current = g_sch.q_ready[counter].p_head->p_thd;
-
-	/*
-	 * If failed:
-	 * Broken link
-	 */
-	UTIL_ASSERT( g_sch.q_ready[counter].p_head->p_next != NULL );
-
-	g_sch.q_ready[counter].p_head =
-			g_sch.q_ready[counter].p_head->p_next;
-
-
-	UTIL_UNLOCK_EVERYTHING();
-
-	/* call portable start function to start kernel */
-	OSPORT_START();
+	UTIL_ASSERT(0);
 }
 
 /**
