@@ -156,6 +156,7 @@ void os_start( void )
 {
 	UTIL_LOCK_EVERYTHING();
 	sch_set_next_thread(&g_sch);
+	g_sch.p_current = g_sch.p_next;
 	UTIL_UNLOCK_EVERYTHING();
 
 	/* call portable start function to start kernel */

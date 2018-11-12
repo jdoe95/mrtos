@@ -28,7 +28,7 @@
 #ifndef HE34C7678_2774_4CD4_90B8_DE1E8329ECDA
 #define HE34C7678_2774_4CD4_90B8_DE1E8329ECDA
 
-#include "../../mrtos-portable/portable.h"
+#include <rtos_portable.h>
 
 #if !defined(OSPORT_BYTE_T) || \
 	!defined(OSPORT_UINT_T) || \
