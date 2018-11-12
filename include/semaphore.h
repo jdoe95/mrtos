@@ -45,24 +45,33 @@ typedef struct sem_schinfo_s sem_schinfo_t;
  */
 struct sem_cblk_s
 {
-	volatile uint_t counter; /* semaphore counter */
-	struct sch_qprio_s q_wait; /* waiting threads */
+	volatile uint_t counter;   /* semaphore counter */
+	struct sch_qprio_s q_wait; /* waiting threads   */
 };
+
+/*
+ * Semaphore wait flag
+ */
+typedef enum
+{
+	SEM_PEEK = (1<<0)
+} sem_wait_flag_t;
 
 /*
  * Semaphore scheduling info
  */
 struct sem_schinfo_s
 {
-	volatile bool_t result; /* wait result */
+	volatile bool_t result;    /* wait result */
+	volatile uint_t wait_flag; /* wait flag   */
 };
 
 /*
  * Initialization functions
  */
 UTIL_UNSAFE void sem_init( sem_cblk_t *p_sem, uint_t initial );
-UTIL_UNSAFE void sem_schinfo_init( sem_schinfo_t *p_schinfo );
-
+UTIL_UNSAFE void sem_schinfo_init( sem_schinfo_t *p_schinfo, uint_t wait_flag );
 UTIL_UNSAFE void sem_delete_static( sem_cblk_t *p_sem, sch_cblk_t *p_sch );
+UTIL_UNSAFE void sem_reset( sem_cblk_t *p_sem, uint_t counter, sch_cblk_t *p_sch );
 
 #endif /* H822CB423_CB23_4742_8D53_7A478AB85C15 */
