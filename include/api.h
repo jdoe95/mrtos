@@ -106,16 +106,18 @@ void              os_mutex_unlock               ( os_handle_t h_mutex );
 os_bool_t         os_mutex_is_locked            ( os_handle_t h_mutex );
 
 os_handle_t       os_queue_create               ( os_uint_t size );
-void              os_queue_delete               ( os_handle_t queue );
-void              os_queue_reset                ( os_handle_t queue );
-os_uint_t         os_queue_get_size             ( os_handle_t queue );
-os_uint_t         os_queue_get_used_size        ( os_handle_t queue );
-os_uint_t         os_queue_get_free_size        ( os_handle_t queue );
-os_bool_t         os_queue_peek                 ( os_handle_t queue, void *p_data, os_uint_t size, os_uint_t timeout );
-os_bool_t         os_queue_peek_nb              ( os_handle_t queue, void *p_data, os_uint_t size );
-os_bool_t         os_queue_send                 ( os_handle_t queue, const void *p_data, os_uint_t size, os_uint_t timeout );
-os_bool_t         os_queue_send_nb              ( os_handle_t queue, const void *p_data, os_uint_t size );
-os_bool_t         os_queue_receive              ( os_handle_t queue, void *p_data, os_uint_t size, os_uint_t timeout );
-os_bool_t         os_queue_receive_nb           ( os_handle_t queue, void *p_data, os_uint_t size );
+void              os_queue_delete               ( os_handle_t h_q );
+void              os_queue_reset                ( os_handle_t h_q );
+os_uint_t         os_queue_get_size             ( os_handle_t h_q );
+os_uint_t         os_queue_get_used_size        ( os_handle_t h_q );
+os_uint_t         os_queue_get_free_size        ( os_handle_t h_q );
+os_bool_t         os_queue_peek                 ( os_handle_t h_q, void *p_data, os_uint_t size, os_uint_t timeout );
+os_bool_t         os_queue_peek_nb              ( os_handle_t h_q, void *p_data, os_uint_t size );
+os_bool_t         os_queue_send                 ( os_handle_t h_q, const void *p_data, os_uint_t size, os_uint_t timeout );
+os_bool_t         os_queue_send_ahead           ( os_handle_t h_q, const void *p_data, os_uint_t size, os_uint_t timeout );
+os_bool_t         os_queue_send_nb              ( os_handle_t h_q, const void *p_data, os_uint_t size );
+os_bool_t         os_queue_send_ahead_nb        ( os_handle_t h_q, const void *p_data, os_uint_t size );
+os_bool_t         os_queue_receive              ( os_handle_t h_q, void *p_data, os_uint_t size, os_uint_t timeout );
+os_bool_t         os_queue_receive_nb           ( os_handle_t h_q, void *p_data, os_uint_t size );
 
 #endif /* H1CB9096F_13C2_4118_B608_F147C53BE57D */

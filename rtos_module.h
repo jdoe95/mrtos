@@ -36,6 +36,7 @@
 #include "include/thread.h"
 #include "include/semaphore.h"
 #include "include/mutex.h"
+#include "include/queue.h"
 #include "include/api.h"
 
 #endif /* H10443F26_8333_43E2_ACCD_FC9E34241DE7 */
