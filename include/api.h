@@ -92,14 +92,14 @@ void              os_semaphore_reset            ( os_handle_t h_sem, os_uint_t i
 os_uint_t         os_semaphore_get_counter      ( os_handle_t h_sem );
 void              os_semaphore_post             ( os_handle_t h_sem );
 os_bool_t         os_semaphore_wait             ( os_handle_t h_sem, os_uint_t timeout );
-os_bool_t         os_semaphore_peek_wait        ( os_handle_t h_sem, os_uint_t timeout );
+os_bool_t         os_semaphore_peek             ( os_handle_t h_sem, os_uint_t timeout );
 os_bool_t         os_semaphore_wait_nb          ( os_handle_t h_sem );
-os_bool_t         os_semaphore_peek_wait_nb     ( os_handle_t h_sem );
+os_bool_t         os_semaphore_peek_nb          ( os_handle_t h_sem );
 
 os_handle_t       os_mutex_create               ( void );
 void              os_mutex_delete               ( os_handle_t h_mutex );
-os_bool_t         os_mutex_peek_lock            ( os_handle_t h_mutex, os_uint_t timeout );
-os_bool_t         os_mutex_peek_lock_nb         ( os_handle_t h_mutex );
+os_bool_t         os_mutex_peek                 ( os_handle_t h_mutex, os_uint_t timeout );
+os_bool_t         os_mutex_peek_nb              ( os_handle_t h_mutex );
 os_bool_t         os_mutex_lock                 ( os_handle_t h_mutex, os_uint_t timeout );
 os_bool_t         os_mutex_lock_nb              ( os_handle_t h_mutex );
 void              os_mutex_unlock               ( os_handle_t h_mutex );
