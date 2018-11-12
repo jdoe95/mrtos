@@ -899,7 +899,8 @@ void thd_return_hook_static( void )
  * The operating system does not implement parenting and thus the thread will
  * not be automatically killed if the parent thread has died. Will trigger
  * reschedule immediately if the created thread has a higher priority.
- * @note This function can be used in interrupt or thread contexts.
+ * @note This function is thread safe and can be used in thread or interrupt
+ * context.
  */
 UTIL_SAFE
 os_handle_t os_thread_create( os_uint_t prio, os_uint_t stack_size, void (*p_job)(void) )
@@ -950,6 +951,8 @@ os_handle_t os_thread_create( os_uint_t prio, os_uint_t stack_size, void (*p_job
 /**
  * @brief Delete a thread, free all memory
  * @param h_thread thread handle
+ * @note This function is thread safe and can be used in thread
+ * or interrupt context.
  */
 UTIL_SAFE
 void os_thread_delete( os_handle_t h_thread )
@@ -1005,6 +1008,8 @@ void thd_return_hook( void )
 
 /**
  * @brief Request reschedule
+ * @note This function is thread safe and can be used
+ * in an interrupt or thread context.
  */
 UTIL_SAFE
 void os_thread_yield( void )
@@ -1026,6 +1031,8 @@ void os_thread_yield( void )
 /**
  * @brief Sleep and then join the ready queue
  * @param timeout time in ticks to sleep
+ * @note This function is thread safe and can only be used
+ * in a thread context.
  */
 UTIL_SAFE
 void os_thread_delay( os_uint_t timeout )
@@ -1042,6 +1049,8 @@ void os_thread_delay( os_uint_t timeout )
  * @brief Get thread priority
  * @param h_thread thread handle, pass 0 for current thread
  * @return priority of h_thread
+ * @note This function is thread safe and can be used in an
+ * interrupt or a thread context.
  */
 UTIL_SAFE
 os_uint_t os_thread_get_priority( os_handle_t h_thread )
@@ -1072,6 +1081,8 @@ os_uint_t os_thread_get_priority( os_handle_t h_thread )
 /**
  * @brief Get current thread handle
  * @return current thread handle
+ * @note This function is thread safe and can be used
+ * in an interrupt or a thread context.
  */
 UTIL_SAFE
 os_handle_t os_thread_get_current( void )
@@ -1096,6 +1107,8 @@ os_handle_t os_thread_get_current( void )
  * @brief Obtain state of thread
  * @param h_thread thread handle, pass 0 for current thread
  * @return state of the thread
+ * @note This function is thread safe and can be used in
+ * an interrupt or a thread context.
  */
 UTIL_SAFE
 os_thread_state_t os_thread_get_state( os_handle_t h_thread )
@@ -1120,6 +1133,8 @@ os_thread_state_t os_thread_get_state( os_handle_t h_thread )
 /**
  * @brief Suspend thread
  * @param h_thread thread to suspend, pass 0 to current thread
+ * @note This function is thread safe and can be used in an
+ * interrupt or a thread context.
  */
 UTIL_SAFE
 void os_thread_suspend( os_handle_t h_thread )
@@ -1169,6 +1184,9 @@ void os_thread_suspend( os_handle_t h_thread )
 /**
  * @brief Resume thread
  * @param h_thread thread to resume, must be non zero
+ * @details Has no effect on a ready thread.
+ * @note This function is thread safe and can be used in
+ * an interrupt or a thread context.
  */
 UTIL_SAFE
 void os_thread_resume( os_handle_t h_thread )
@@ -1194,6 +1212,8 @@ void os_thread_resume( os_handle_t h_thread )
  * @param h_thread handle to thread to set priority, pass 0 for current
  * thread
  * @param prio priority
+ * @note This function is thread safe and can be used in an interrupt
+ * or a thread context.
  */
 void os_thread_set_priority( os_handle_t h_thread, os_uint_t prio )
 {
