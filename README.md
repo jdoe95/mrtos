@@ -1,4 +1,4 @@
-#Microcontroller Real Time Operating System
+# Microcontroller Real Time Operating System
 
 This operating system is designed for SINGLE CORE microcontrollers and uses the [fixed-priority preemptive scheduling algorithm](https://en.wikipedia.org/wiki/Fixed-priority_pre-emptive_scheduling). Stated briefly as follows,
 
@@ -16,9 +16,9 @@ If you believe you have found a bug, please consider reporting it in [ISSUES](ht
 1. Version or versions known to be good (tag, git-describe, or commit ID)
 
 
-##Features
+## Features
 
-###Multithreading
+### Multithreading
 
 1. Dynamic thread creation and deletion
 1. Static thread creation and deletion using existing buffer (as RTOS module)
@@ -28,14 +28,14 @@ If you believe you have found a bug, please consider reporting it in [ISSUES](ht
 1. Yielding
 1. Critical section
 
-###Dynamic memory
+### Dynamic memory
 
 1. Dynamic memory allocation/deallocation using [Next Fit](https://www.geeksforgeeks.org/program-next-fit-algorithm-memory-management/)
 1. Block/Pool/Thread memory statistics
 
-###Inter-process communication
+### Inter-process communication
 
-####Queue
+#### Queue
 1. Dynamic creation and deletion
 1. Static creation and deletion using existing buffer (as RTOS module)
 1. Buffer reset (clear all data)
@@ -44,7 +44,7 @@ If you believe you have found a bug, please consider reporting it in [ISSUES](ht
 1. Send/Nonblocking send
 1. Send ahead/Nonblocking send ahead (sending high priority messages)
 
-####Mutex (recursive)
+#### Mutex (recursive)
 1. Dynamic creation and deletion
 1. Static creation and deletion using existing buffer (as RTOS module)
 1. Peek mutex without affecting the lock status
@@ -53,7 +53,7 @@ If you believe you have found a bug, please consider reporting it in [ISSUES](ht
 1. Lock status
 
 
-####Semaphore (multi-valued)
+#### Semaphore (multi-valued)
 1. Dynamic creation and deletion
 1. Static creation and deletion using existing buffer (as RTOS module)
 1. Counter reset
@@ -61,10 +61,10 @@ If you believe you have found a bug, please consider reporting it in [ISSUES](ht
 1. Wait/Nonblocking wait operations
 1. Peek/Nonbloking peek without affecting semaphore status
  
-##How to port
-###Using supported platforms
+## How to port
+### Using supported platforms
 
-###Porting to unsupported platforms
+### Porting to unsupported platforms
 
 Clone the mrtos source code under your project using
 
