@@ -642,7 +642,7 @@ os_bool_t os_queue_send(os_handle_t h_q, const void *p_data, os_uint_t size,
 		queue_schnifo_write_init( &schinfo, 0 );
 		schinfo.p_data = p_data;
 		schinfo.size = size;
-		thd_block_current(&p_q->q_wait_read, &schinfo, timeout, &g_sch );
+		thd_block_current(&p_q->q_wait_write, &schinfo, timeout, &g_sch );
 		ret = schinfo.result;
 	}
 
@@ -702,7 +702,7 @@ os_bool_t os_queue_send_ahead(os_handle_t h_q, const void *p_data, os_uint_t siz
 		queue_schnifo_write_init( &schinfo, QUEUE_WRITE_AHEAD );
 		schinfo.p_data = p_data;
 		schinfo.size = size;
-		thd_block_current(&p_q->q_wait_read, &schinfo, timeout, &g_sch );
+		thd_block_current(&p_q->q_wait_write, &schinfo, timeout, &g_sch );
 		ret = schinfo.result;
 	}
 
