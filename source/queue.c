@@ -634,6 +634,7 @@ os_bool_t os_queue_send(os_handle_t h_q, const void *p_data, os_uint_t size,
 	if( queue_get_free_size(p_q) >= size )
 	{
 		queue_write(p_q, p_data, size );
+		queue_unlock_threads( p_q, &g_sch );
 		ret = true;
 	}
 	else
@@ -667,6 +668,7 @@ os_bool_t os_queue_send_nb(os_handle_t h_q, const void *p_data,
 	if( queue_get_free_size(p_q) >= size )
 	{
 		queue_write(p_q, p_data, size );
+		queue_unlock_threads( p_q, &g_sch );
 		ret = true;
 	}
 	UTIL_UNLOCK_EVERYTHING();
@@ -692,6 +694,7 @@ os_bool_t os_queue_send_ahead(os_handle_t h_q, const void *p_data, os_uint_t siz
 	if( queue_get_free_size(p_q) >= size )
 	{
 		queue_write_ahead(p_q, p_data, size );
+		queue_unlock_threads( p_q, &g_sch );
 		ret = true;
 	}
 	else
@@ -725,6 +728,7 @@ os_bool_t os_queue_send_ahead_nb(os_handle_t h_q, const void *p_data,
 	if( queue_get_free_size(p_q) >= size )
 	{
 		queue_write_ahead(p_q, p_data, size );
+		queue_unlock_threads( p_q, &g_sch );
 		ret = true;
 	}
 	UTIL_UNLOCK_EVERYTHING();
@@ -750,6 +754,7 @@ os_bool_t os_queue_receive(os_handle_t h_q, void *p_data, os_uint_t size,
 	if( queue_get_used_size(p_q) >= size )
 	{
 		queue_read(p_q, p_data, size );
+		queue_unlock_threads( p_q, &g_sch );
 		ret = true;
 	}
 	else
@@ -782,6 +787,7 @@ os_bool_t os_queue_receive_nb(os_handle_t h_q, void *p_data, os_uint_t size)
 	if( queue_get_used_size(p_q) >= size )
 	{
 		queue_read(p_q, p_data, size );
+		queue_unlock_threads( p_q, &g_sch );
 		ret = true;
 	}
 
