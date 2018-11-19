@@ -63,6 +63,15 @@ If you believe you have found a bug, please consider reporting it in [ISSUES](ht
  
 ## How to port
 ### Using supported platforms
+If you are using one of the following platforms, clone the corresponding repository
+into a folder called ``mrtos-portable``, under the same directory as ``mrtos``, using the following command:
+
+```
+git clone <repository> mrtos-portable
+```
+
+* [ARM Cortex M0, ARM Cortex M0+](https://github.com/jdoe95/mrtos-portable-cortexm0plus)
+
 
 ### Porting to unsupported platforms
 
