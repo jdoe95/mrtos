@@ -66,6 +66,10 @@ struct sem_schinfo_s
 	volatile uint_t wait_flag; /* wait flag   */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Initialization functions
  */
@@ -73,5 +77,9 @@ UTIL_UNSAFE void sem_init( sem_cblk_t *p_sem, uint_t initial );
 UTIL_UNSAFE void sem_schinfo_init( sem_schinfo_t *p_schinfo, uint_t wait_flag );
 UTIL_UNSAFE void sem_delete_static( sem_cblk_t *p_sem, sch_cblk_t *p_sch );
 UTIL_UNSAFE void sem_reset( sem_cblk_t *p_sem, uint_t counter, sch_cblk_t *p_sch );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* H822CB423_CB23_4742_8D53_7A478AB85C15 */

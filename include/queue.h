@@ -93,6 +93,10 @@ struct queue_schinfo_write_s
 	volatile uint_t flag;                  /* flag        */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Initialization functions
  */
@@ -107,5 +111,9 @@ UTIL_UNSAFE void queue_peek( const queue_cblk_t *p_q, byte_t *p_data, uint_t siz
 UTIL_UNSAFE uint_t queue_get_used_size(const queue_cblk_t *p_q );
 UTIL_UNSAFE uint_t queue_get_free_size(const queue_cblk_t *p_q );
 UTIL_UNSAFE void queue_unlock_threads( queue_cblk_t *p_q, sch_cblk_t *p_sch );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* H37FD4A18_A407_4E67_B4AF_775AD0BA0B71 */

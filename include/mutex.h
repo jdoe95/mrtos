@@ -67,11 +67,19 @@ struct mutex_schinfo_s
 	volatile uint_t wait_flag; /* wait flag   */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Initialization functions
  */
 UTIL_UNSAFE void mutex_init( mutex_cblk_t *p_mutex );
 UTIL_UNSAFE void mutex_schinfo_init( mutex_schinfo_t *p_schinfo, uint_t wait_flag );
 UTIL_UNSAFE void mutex_delete_static( mutex_cblk_t *p_mutex, sch_cblk_t *p_sch );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* H19FA4BCD_7A56_4B7D_A67A_063B3FFE82A9 */

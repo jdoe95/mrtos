@@ -72,6 +72,9 @@ struct mpool_s
 	struct mblk_s *volatile p_alloc_head; /* allocation head */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
  * Initialization functions
  */
@@ -98,6 +101,10 @@ UTIL_UNSAFE void mpool_merge(mblk_t *p_mblk, mpool_t *p_mpool);
  */
 UTIL_UNSAFE void *mpool_alloc(uint_t size, mpool_t *p_mpool, mlst_t *p_mlst );
 UTIL_UNSAFE void mpool_free(void *p, mpool_t *p_mpool);
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
  * Diagnostics
@@ -136,9 +143,17 @@ struct mpool_info_s
 	uint_t count; /* number of blocks in pool */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 UTIL_UNSAFE void mblk_gather_info( const mblk_t *p_mblk, mblk_info_t *p_info);
 UTIL_UNSAFE void mlst_gather_info( const mlst_t *p_mlst, mlst_info_t *p_info);
 UTIL_UNSAFE void mpool_gather_info( const mpool_t *p_mpool, mpool_info_t *p_info);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* H2D331914_483F_4D1B_9049_BFF1D74B0B20 */
 
