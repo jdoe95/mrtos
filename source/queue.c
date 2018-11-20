@@ -221,7 +221,6 @@ void queue_peek( const queue_cblk_t *p_q, byte_t *p_data, uint_t size )
 	 * Invalid parameters
 	 */
 	UTIL_ASSERT( p_q != NULL );
-	UTIL_ASSERT( p_data != NULL );
 
 	/*
 	 * If failed:
@@ -410,7 +409,10 @@ void queue_unlock_threads( queue_cblk_t *p_q, sch_cblk_t *p_sch )
 				{
 					/* check flags */
 					if( p_readinfo->flag & QUEUE_READ_PEEK )
-						queue_peek(p_q, p_readinfo->p_data, p_readinfo->size );
+					{
+						if( p_readinfo->p_data != NULL )
+							queue_peek(p_q, p_readinfo->p_data, p_readinfo->size );
+					}
 					else
 						queue_read(p_q, p_readinfo->p_data, p_readinfo->size );
 
@@ -575,7 +577,9 @@ os_bool_t os_queue_peek(os_handle_t h_q, void *p_data, os_uint_t size,
 	UTIL_LOCK_EVERYTHING();
 	if( queue_get_used_size(p_q) >= size )
 	{
-		queue_peek(p_q, p_data, size );
+		if( p_data != NULL )
+			queue_peek(p_q, p_data, size );
+
 		ret = true;
 	}
 	else
@@ -607,7 +611,8 @@ os_bool_t os_queue_peek_nb(os_handle_t h_q, void *p_data, os_uint_t size)
 	UTIL_LOCK_EVERYTHING();
 	if( queue_get_used_size(p_q) >= size )
 	{
-		queue_peek(p_q, p_data, size );
+		if( p_data != NULL)
+			queue_peek(p_q, p_data, size );
 		ret = true;
 	}
 
