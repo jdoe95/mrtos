@@ -58,18 +58,18 @@ struct queue_cblk_s
 /*
  * Queue write wait flag
  */
-typedef enum
+enum
 {
 	QUEUE_WRITE_AHEAD = (1<<0)
-} queue_write_wait_flag_t;
+} ;
 
 /*
  * Queue read wait flag
  */
-typedef enum
+enum
 {
 	QUEUE_READ_PEEK = (1<<0)
-} queue_read_wait_flag_t;
+} ;
 
 /*
  * Queue scheduling info
@@ -79,7 +79,7 @@ struct queue_schinfo_read_s
 	volatile bool_t result;               /* wait result */
 	volatile uint_t size;                 /* read size   */
 	byte_t *volatile p_data;              /* data        */
-	volatile queue_read_wait_flag_t flag; /* flag        */
+	volatile uint_t flag;                 /* flag        */
 };
 
 /*
@@ -90,7 +90,7 @@ struct queue_schinfo_write_s
 	volatile bool_t result;                /* wait result */
 	volatile uint_t size;                  /* read size   */
 	const byte_t *volatile p_data;         /* data        */
-	volatile queue_write_wait_flag_t flag; /* flag        */
+	volatile uint_t flag;                  /* flag        */
 };
 
 /*
