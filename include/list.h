@@ -47,6 +47,10 @@ struct lstitem_s
 	struct lstitem_s *volatile p_next; /* next item     */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Functions
  */
@@ -54,5 +58,9 @@ UTIL_UNSAFE void lstitem_init(lstitem_t *p_item);
 UTIL_UNSAFE void lstitem_prepend(lstitem_t *p_item, lstitem_t *p_pos);
 UTIL_UNSAFE void lstitem_append(lstitem_t *p_item, lstitem_t *p_pos);
 UTIL_UNSAFE void lstitem_remove(lstitem_t *p_item);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HCF3C71DF_C7E5_4FCF_83DB_247240F12599 */

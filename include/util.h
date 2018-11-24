@@ -52,7 +52,15 @@ typedef os_uint_t uint_t;
 typedef os_handle_t handle_t;
 typedef os_bool_t bool_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void util_dint_nested( void );
 void util_eint_nested( void );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* H7D9C202C_17FC_4683_B032_AC3425ABC5EC */

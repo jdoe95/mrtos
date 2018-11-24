@@ -103,6 +103,10 @@ struct sch_qprio_s
 	struct sch_qitem_s *volatile p_head; /* queue head */
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Initialization functions
  */
@@ -116,6 +120,10 @@ UTIL_UNSAFE void sch_qitem_enq_fifo( sch_qitem_t *p_item, sch_qfifo_t *p_fifo );
 UTIL_UNSAFE void sch_qitem_enq_prio( sch_qitem_t *p_item, sch_qprio_t *p_prio );
 UTIL_UNSAFE sch_qitem_t* sch_qitem_deq( void *p_q );
 UTIL_UNSAFE void sch_qitem_remove( sch_qitem_t *p_item );
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
  * Scheduler control block
@@ -148,6 +156,10 @@ struct thd_cblk_s
 	void *volatile p_stack;			  /* stack memory 		    */
 	void *volatile p_schinfo;         /* scheduling info        */
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Scheduler functions
@@ -182,5 +194,9 @@ UTIL_UNSAFE void thd_delete_static(thd_cblk_t *p_thd, sch_cblk_t *p_sch);
 
 UTIL_SAFE void thd_return_hook_static( void );
 UTIL_SAFE void thd_return_hook( void );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* H22A9CDB9_7059_460F_BAEE_7953ABC94E21 */

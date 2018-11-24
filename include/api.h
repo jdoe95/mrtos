@@ -36,12 +36,20 @@ typedef struct {
 	os_uint_t pool_size; /* pool size, must be aligned              */
 } os_config_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void      os_init                 ( const os_config_t *p_config );
 void      os_start                ( void );
 void      os_handle_heartbeat     ( void );
 os_uint_t os_get_time             ( void );
 void      os_enter_critical       ( void );
 void      os_exit_critical        ( void );
+
+#ifdef __cplusplus
+}
+#endif
 
 /* Information about a memory block */
 typedef struct {
@@ -60,11 +68,19 @@ typedef struct {
 	os_uint_t num_blocks;  /* number of memory blocks allocated to thread */
 } os_memory_thread_info_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void*  os_memory_allocate       ( os_uint_t size );
 void   os_memory_free           ( void *p );
 void   os_memory_get_block_info ( void *p, os_memory_block_info_t *p_info );
 void   os_memory_get_thread_info( os_handle_t h_thread, os_memory_thread_info_t *p_info );
 void   os_memory_get_pool_info  ( os_memory_pool_info_t *p_info );
+
+#ifdef __cplusplus
+}
+#endif
 
 /* thread state definition */
 typedef enum
@@ -74,6 +90,10 @@ typedef enum
 	OS_THREAD_SUSPENDED,
 	OS_THREAD_DELETED
 } os_thread_state_t;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 os_handle_t       os_thread_create              ( os_uint_t prio, os_uint_t stack_size, void  (*p_job) (void) );
 void              os_thread_delete              ( os_handle_t h_thread );
@@ -86,6 +106,14 @@ os_uint_t         os_thread_get_priority        ( os_handle_t h_thread );
 void              os_thread_yield               ( void );
 void              os_thread_delay               ( os_uint_t timeout );
 
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 os_handle_t       os_semaphore_create           ( os_uint_t initial );
 void              os_semaphore_delete           ( os_handle_t h_sem );
 void              os_semaphore_reset            ( os_handle_t h_sem, os_uint_t initial );
@@ -96,6 +124,14 @@ os_bool_t         os_semaphore_peek             ( os_handle_t h_sem, os_uint_t t
 os_bool_t         os_semaphore_wait_nb          ( os_handle_t h_sem );
 os_bool_t         os_semaphore_peek_nb          ( os_handle_t h_sem );
 
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 os_handle_t       os_mutex_create               ( void );
 void              os_mutex_delete               ( os_handle_t h_mutex );
 os_bool_t         os_mutex_peek                 ( os_handle_t h_mutex, os_uint_t timeout );
@@ -104,6 +140,14 @@ os_bool_t         os_mutex_lock                 ( os_handle_t h_mutex, os_uint_t
 os_bool_t         os_mutex_lock_nb              ( os_handle_t h_mutex );
 void              os_mutex_unlock               ( os_handle_t h_mutex );
 os_bool_t         os_mutex_is_locked            ( os_handle_t h_mutex );
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 os_handle_t       os_queue_create               ( os_uint_t size );
 void              os_queue_delete               ( os_handle_t h_q );
@@ -119,5 +163,9 @@ os_bool_t         os_queue_send_nb              ( os_handle_t h_q, const void *p
 os_bool_t         os_queue_send_ahead_nb        ( os_handle_t h_q, const void *p_data, os_uint_t size );
 os_bool_t         os_queue_receive              ( os_handle_t h_q, void *p_data, os_uint_t size, os_uint_t timeout );
 os_bool_t         os_queue_receive_nb           ( os_handle_t h_q, void *p_data, os_uint_t size );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* H1CB9096F_13C2_4118_B608_F147C53BE57D */
