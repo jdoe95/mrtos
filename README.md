@@ -64,14 +64,19 @@ If you believe you have found a bug, please consider reporting it in [ISSUES](ht
 ## How to port
 ### Using supported platforms
 If you are using one of the following platforms, clone the corresponding repository
-into a folder called ``mrtos-portable``, under the same directory as ``mrtos``, using the following command:
+into a folder called ``mrtos-portable``, under the same directory as ``mrtos``, using the command
 
 ```
 git clone <repository> mrtos-portable
 ```
 
-* [ARM Cortex M0, ARM Cortex M0+](https://github.com/jdoe95/mrtos-portable-cortexm0plus)
+Don't forget to add path ``mrtos-portable`` to the compiler search path ``-Imrtos-portable``
+so that mRTOS can find the portable header file.
 
+Supported platforms:
+
+* [ARM Cortex M0, ARM Cortex M0+](https://github.com/jdoe95/mrtos-portable-cortexm0plus)
+* [Texas Instruments C28](https://github.com/jdoe95/mrtos-portable-c28)
 
 ### Porting to unsupported platforms
 
