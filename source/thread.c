@@ -958,6 +958,7 @@ UTIL_SAFE
 void os_thread_delete( os_handle_t h_thread )
 {
 	thd_cblk_t *p_thd;
+	mblk_t *p_mblk;
 
 	UTIL_LOCK_EVERYTHING();
 
@@ -972,7 +973,25 @@ void os_thread_delete( os_handle_t h_thread )
 	 */
 	UTIL_ASSERT(p_thd != NULL);
 
-	thd_delete_static( p_thd, &g_sch);
+	p_thd->state = THD_STATE_DELETED;
+
+	/* remove scheduling item */
+	if( p_thd->item_sch.p_q != NULL )
+		sch_qitem_remove( &p_thd->item_sch );
+
+	/* remove delay item */
+	if( p_thd->item_delay.p_q != NULL )
+		sch_qitem_remove( &p_thd->item_delay );
+
+	/* release memory */
+	while( p_thd->mlst.p_head != NULL )
+	{
+		p_mblk = p_thd->mlst.p_head;
+		mlst_remove( p_mblk );
+		mpool_insert( p_mblk, &g_mpool );
+	}
+
+	p_thd->p_schinfo = NULL;
 
 	/*
 	 * If failed:
@@ -984,9 +1003,11 @@ void os_thread_delete( os_handle_t h_thread )
 	mpool_free(p_thd->p_stack, &g_mpool);
 	mpool_free(p_thd, &g_mpool);
 
-	/*
-	 * reschedule won't happen until this function returns
-	 */
+	if( p_thd == g_sch.p_current )
+	{
+		sch_unload_current(&g_sch);
+	}
+
 	UTIL_UNLOCK_EVERYTHING();
 }
 
